@@ -8,3 +8,4 @@ contracts/broadcast/*/31337/
 dist/
 .next/
 *.log
+worker/circle-recovery.dat

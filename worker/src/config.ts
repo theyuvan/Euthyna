@@ -1,0 +1,60 @@
+import "dotenv/config";
+import { z } from "zod";
+
+const hex = z.string().regex(/^0x[0-9a-fA-F]+$/);
+
+const schema = z.object({
+  DATABASE_URL: z.string().min(1),
+  ARC_RPC_URL: z.string().url().default("https://rpc.testnet.arc.network"),
+  ARC_CHAIN_ID: z.coerce.number().default(5042002),
+  EXPLORER_URL: z.string().default("https://testnet.arcscan.app"),
+  FACTORY_ADDRESS: hex.optional(),
+  FACTORY_START_BLOCK: z.coerce.bigint().default(0n),
+
+  // "circle" = Circle dev-controlled SCA wallet per vault (production path).
+  // "local"  = a raw private key, for testing before Circle is set up.
+  EXECUTOR: z.enum(["circle", "local"]).default("circle"),
+  CIRCLE_API_KEY: z.string().optional(),
+  CIRCLE_ENTITY_SECRET: z.string().optional(),
+  CIRCLE_WALLET_SET_ID: z.string().optional(),
+  CIRCLE_FEE_LEVEL: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
+  AGENT_PRIVATE_KEY: hex.optional(),
+
+  ANTHROPIC_API_KEY: z.string().optional(),
+  LLM_MODEL: z.string().default("claude-opus-5-5"),
+  LLM_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
+  PROMPT_VERSION: z.string().default("euthyna-v1"),
+  // Test only: read the decision from this JSON file instead of calling the model. Recorded as model "stub".
+  LLM_STUB_FILE: z.string().optional(),
+
+  AGENT_INTERVAL_MIN: z.coerce.number().default(30),
+  SETTLER_INTERVAL_MIN: z.coerce.number().default(10),
+  INDEXER_INTERVAL_SEC: z.coerce.number().default(60),
+  LOG_CHUNK_BLOCKS: z.coerce.bigint().default(5000n),
+  // Policy safety net: pay a payable owner bill due within this many hours if the LLM skipped it.
+  AUTO_PAY_WITHIN_HOURS: z.coerce.number().default(2),
+
+  PORT: z.coerce.number().default(8787),
+  ADMIN_TOKEN: z.string().optional(),
+  CORS_ORIGIN: z.string().default("*"),
+});
+
+export type Config = z.infer<typeof schema>;
+
+export const config: Config = (() => {
+  const parsed = schema.safeParse(process.env);
+  if (!parsed.success) {
+    console.error("Invalid environment:\n" + z.prettifyError(parsed.error));
+    process.exit(1);
+  }
+  const c = parsed.data;
+  if (c.EXECUTOR === "circle" && (!c.CIRCLE_API_KEY || !c.CIRCLE_ENTITY_SECRET)) {
+    console.error("EXECUTOR=circle needs CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET");
+    process.exit(1);
+  }
+  if (c.EXECUTOR === "local" && !c.AGENT_PRIVATE_KEY) {
+    console.error("EXECUTOR=local needs AGENT_PRIVATE_KEY");
+    process.exit(1);
+  }
+  return c;
+})();
