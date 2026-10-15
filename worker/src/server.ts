@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { getAddress, isAddress, verifyMessage, type Hex } from "viem";
 import { z } from "zod";
@@ -7,6 +9,7 @@ import { publicClient, txUrl } from "./chain.js";
 import { canonicalJson, hashCanonical } from "./canonical.js";
 import { config } from "./config.js";
 import { one, q, vaultByAddress, type VaultRow } from "./db.js";
+import { subscribe } from "./events.js";
 import { circle, localAgentAddress } from "./executor.js";
 import { indexNow, requestRun } from "./scheduler.js";
 import { settleVault } from "./settler.js";
@@ -68,6 +71,9 @@ export function createServer() {
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();
   });
+
+  // Minimal static pages (currently just /live.html — the live reasoning stream). No build step.
+  app.use(express.static(join(dirname(fileURLToPath(import.meta.url)), "..", "public")));
 
   app.get("/health", (_req, res) => res.json({ ok: true, executor: config.EXECUTOR, model: config.LLM_MODEL }));
 
@@ -194,6 +200,28 @@ export function createServer() {
         [req.vault.id],
       );
       res.json({ start: { at: req.vault.created_block, limit: fmt(base), score: "0" }, points });
+    }),
+  );
+
+  /** Live reasoning stream: every stage of the agent loop as it happens (SSE). */
+  app.get(
+    "/api/vaults/:vault/live",
+    loadVault,
+    h(async (req: VReq, res) => {
+      res.setHeader("content-type", "text/event-stream");
+      res.setHeader("cache-control", "no-cache");
+      res.setHeader("connection", "keep-alive");
+      res.flushHeaders?.();
+
+      // Catch the viewer up on recent history before streaming new events.
+      const recent = await q(
+        "select stage, detail, at from agent_events where vault_id = $1 order by at desc limit 50",
+        [req.vault.id],
+      );
+      for (const e of recent.reverse()) res.write(`data: ${JSON.stringify(e)}\n\n`);
+
+      const unsubscribe = subscribe(req.vault.id, res);
+      req.on("close", unsubscribe);
     }),
   );
 

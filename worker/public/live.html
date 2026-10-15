@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Euthyna — live</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0b0f0d; color: #c9f7d8; font: 14px/1.5 ui-monospace, "Cascadia Code", "Fira Code", monospace; }
+  header { padding: 14px 18px; border-bottom: 1px solid #1d3326; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header input { background: #0f1512; border: 1px solid #1d3326; color: #c9f7d8; padding: 6px 8px; border-radius: 4px; width: 380px; max-width: 60vw; font: inherit; }
+  header .status { margin-left: auto; opacity: 0.7; }
+  #log { padding: 18px; white-space: pre-wrap; word-break: break-word; max-width: 100%; }
+  .line { margin-bottom: 10px; border-left: 3px solid #2a5d3f; padding-left: 10px; }
+  .stage { color: #7fffa0; font-weight: 600; }
+  .at { color: #5a7a68; font-size: 12px; margin-left: 8px; }
+  .detail { color: #9fd8b5; }
+  .stage-confirmed { border-left-color: #4fdc7a; }
+  .stage-failed, .stage-proposed-error { border-left-color: #e06060; }
+  .stage-failed .stage { color: #ff8585; }
+</style>
+</head>
+<body>
+<header>
+  <span>vault</span>
+  <input id="vault" placeholder="0x..." />
+  <button id="go">watch</button>
+  <span class="status" id="status">idle</span>
+</header>
+<div id="log"></div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const input = document.getElementById("vault");
+  const log = document.getElementById("log");
+  const statusEl = document.getElementById("status");
+  input.value = params.get("vault") || "";
+
+  let es = null;
+  function line(stage, detail, at) {
+    const d = document.createElement("div");
+    d.className = "line stage-" + stage;
+    const t = at ? new Date(at).toLocaleTimeString() : "";
+    d.innerHTML = '<span class="stage">' + stage + '</span><span class="at">' + t + '</span><div class="detail"></div>';
+    d.querySelector(".detail").textContent = detail === undefined ? "" : JSON.stringify(detail, null, 2);
+    log.appendChild(d);
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  function watch(vault) {
+    if (es) es.close();
+    log.innerHTML = "";
+    if (!vault) return;
+    history.replaceState(null, "", "?vault=" + vault);
+    statusEl.textContent = "connecting...";
+    es = new EventSource("/api/vaults/" + vault + "/live");
+    es.onopen = () => (statusEl.textContent = "live");
+    es.onerror = () => (statusEl.textContent = "disconnected (retrying)");
+    es.onmessage = (ev) => {
+      const { stage, detail, at } = JSON.parse(ev.data);
+      line(stage, detail, at);
+    };
+  }
+
+  document.getElementById("go").onclick = () => watch(input.value.trim());
+  input.addEventListener("keydown", (e) => e.key === "Enter" && watch(input.value.trim()));
+  if (input.value) watch(input.value);
+</script>
+</body>
+</html>

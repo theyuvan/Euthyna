@@ -9,3 +9,4 @@ dist/
 .next/
 *.log
 worker/circle-recovery.dat
+worker/recovery_file_*.dat

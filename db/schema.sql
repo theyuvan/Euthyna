@@ -169,3 +169,15 @@ create table if not exists worker_state (
   key   text primary key,
   value jsonb not null
 );
+
+-- Stage-by-stage trace of each agent run (snapshot taken, deciding, proposed, policy check, sending,
+-- confirmed), for the live reasoning stream. Purely additive logging: nothing reads this table to
+-- decide anything, it only drives /api/vaults/:id/live.
+create table if not exists agent_events (
+  id        bigint generated always as identity primary key,
+  vault_id  uuid not null references vaults(id),
+  stage     text not null,
+  detail    jsonb,
+  at        timestamptz not null default now()
+);
+create index if not exists agent_events_vault_at on agent_events (vault_id, at desc);

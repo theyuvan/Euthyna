@@ -2,13 +2,15 @@ import "dotenv/config";
 import { z } from "zod";
 
 const hex = z.string().regex(/^0x[0-9a-fA-F]+$/);
+// Empty env vars ("FACTORY_ADDRESS=" with nothing after it) arrive as "", not undefined.
+const optionalHex = z.preprocess((v) => (v === "" ? undefined : v), hex.optional());
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
   ARC_RPC_URL: z.string().url().default("https://rpc.testnet.arc.network"),
   ARC_CHAIN_ID: z.coerce.number().default(5042002),
   EXPLORER_URL: z.string().default("https://testnet.arcscan.app"),
-  FACTORY_ADDRESS: hex.optional(),
+  FACTORY_ADDRESS: optionalHex,
   FACTORY_START_BLOCK: z.coerce.bigint().default(0n),
 
   // "circle" = Circle dev-controlled SCA wallet per vault (production path).
@@ -18,9 +20,17 @@ const schema = z.object({
   CIRCLE_ENTITY_SECRET: z.string().optional(),
   CIRCLE_WALLET_SET_ID: z.string().optional(),
   CIRCLE_FEE_LEVEL: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
-  AGENT_PRIVATE_KEY: hex.optional(),
+  AGENT_PRIVATE_KEY: optionalHex,
 
+  // "anthropic" calls Claude directly. "xai" and "gemini" call Grok / Gemini via their
+  // OpenAI-compatible endpoints. Either way the model only proposes actions; policy.ts and the
+  // contract are what gate money.
+  LLM_PROVIDER: z.enum(["anthropic", "xai", "gemini"]).default("anthropic"),
   ANTHROPIC_API_KEY: z.string().optional(),
+  XAI_API_KEY: z.string().optional(),
+  XAI_BASE_URL: z.string().url().default("https://api.x.ai/v1"),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_BASE_URL: z.string().url().default("https://generativelanguage.googleapis.com/v1beta/openai/"),
   LLM_MODEL: z.string().default("claude-opus-5-5"),
   LLM_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
   PROMPT_VERSION: z.string().default("euthyna-v1"),

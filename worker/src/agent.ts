@@ -6,6 +6,7 @@ import { publicClient } from "./chain.js";
 import { canonicalJson, hashCanonical } from "./canonical.js";
 import { config } from "./config.js";
 import { alertOwner, q, withVaultLock, type VaultRow } from "./db.js";
+import { emit } from "./events.js";
 import { send, simulate, waitCircle } from "./executor.js";
 import { decide, llmView } from "./llm.js";
 import { applyPolicy, type FinalAction } from "./policy.js";
@@ -88,9 +89,20 @@ async function runLocked(v: VaultRow, trigger: string): Promise<RunSummary> {
   if (snapshot.state.agent.toLowerCase() !== v.agent_address.toLowerCase()) {
     return { vault: v.address, skipped: `agent revoked or changed on-chain (now ${snapshot.state.agent})` };
   }
+  await emit(v.id, "snapshot", {
+    liquidUsdc: fmt(snapshot.state.liquid),
+    autonomousLimitUsdc: fmt(snapshot.state.autonomousLimit),
+    openBills: snapshot.openObligations.length,
+  });
+
   const pre = precompute(snapshot);
-  const llm = await decide(llmView(snapshot, pre));
+  const view = llmView(snapshot, pre);
+  await emit(v.id, "deciding", { trigger, payable: pre.payable.length, mustEscalate: pre.mustEscalate.length, canSweep: pre.canSweep });
+  const llm = await decide(view);
+  await emit(v.id, "proposed", llm.output ? { actions: llm.output.actions, confidence: llm.output.confidence } : { error: llm.error });
+
   const policy = applyPolicy(snapshot, pre, llm.output);
+  await emit(v.id, "policy_check", { actions: policy.actions, log: policy.log });
 
   const record = {
     version: 1,
@@ -146,13 +158,17 @@ async function runLocked(v: VaultRow, trigger: string): Promise<RunSummary> {
       continue;
     }
     await q("update decision_actions set status = 'SENT', updated_at = now() where decision_id = $1 and idx = $2", [decisionId, idx]);
+    await emit(v.id, "sending", { type: a.type, idx });
     const r = await send({ to: v.address, data, from: v.agent_address, walletId: v.agent_wallet_id, idempotencyKey: key, refId: `${a.type}:${decisionId}:${idx}` });
     await q(
       "update decision_actions set status = $3, circle_tx_id = $4, tx_hash = $5, error = $6, updated_at = now() where decision_id = $1 and idx = $2",
       [decisionId, idx, r.ok ? "CONFIRMED" : "FAILED", r.circleTxId, r.txHash, r.error],
     );
+    await emit(v.id, r.ok ? "confirmed" : "failed", { type: a.type, idx, txHash: r.txHash, error: r.error });
     results.push({ type: a.type, status: r.ok ? "CONFIRMED" : "FAILED", txHash: r.txHash, error: r.error });
   }
+
+  if (!policy.actions.length) await emit(v.id, "confirmed", { hold: true });
 
   if (policy.actions.length) {
     const ok = results.filter((r) => r.status === "CONFIRMED").length;

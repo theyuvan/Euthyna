@@ -94,10 +94,31 @@ All 22 attacks from the spec are closed. Tests are in `contracts/test/EuthynaVau
   hardware wallet or a Safe as the owner.
 - **Testnet USDC has no real value.** Traction means real businesses' real bills, mirrored in test USDC.
 
+## Status (honest)
+
+| Piece | Status |
+| --- | --- |
+| Vault: pay / sweep / redeem / settle | ✅ live on Arc testnet, 37/37 Foundry tests pass, verified on Arcscan |
+| Score → autonomous limit formula | ✅ live, enforced entirely in the contract |
+| Agent worker loop (snapshot → decide → policy → execute) | ✅ live, runs every 30 min and on demand |
+| Real payment through a real Circle SCA wallet | ✅ verified end-to-end on Arc testnet (Gas Station-sponsored, ERC-4337) |
+| Decision hash + replay (`/api/decisions/:id`) | ✅ live; tamper detection confirmed (edited record flips the check red) |
+| Live reasoning stream (`/api/vaults/:id/live`, `/live.html`) | ✅ live: snapshot → deciding → proposed → policy_check → sending → confirmed, over SSE |
+| LLM provider | ✅ pluggable — Anthropic, xAI (Grok), or Gemini via `LLM_PROVIDER`; currently running Gemini |
+| Recurring bills (`addRecurring` / `materializeRecurring`) | ✅ contract + settler wired; no API route yet to add one (call the contract directly for now) |
+| Reserve yield (USYC) | ⬜ stubbed — internal bucket only, no yield; Circle allowlist ticket not filed |
+| Invoice OCR | ⬜ not built — bills are entered as owner-registered obligations by hand |
+| Dashboard (Treasury / Trust chart / Escalations pages) | ⬜ not built — this repo is backend + API only right now; `/live.html` is the one page that exists |
+| Real business data in the production vault | ⬜ not yet — the production vault (`0x0767f136…`) is live and empty, waiting for real payees/bills |
+
 ## Running it
 
 Prerequisites: [Foundry](https://getfoundry.sh), Node 20+, a Supabase project, a Circle developer account
-(testnet API key) and an Anthropic API key.
+(testnet API key), and a key for one LLM provider — Anthropic, [xAI](https://console.x.ai) (Grok), or
+[Google AI Studio](https://aistudio.google.com/apikey) (Gemini, free tier). Set `LLM_PROVIDER` and the
+matching `*_API_KEY` in `.env`; `LLM_MODEL` defaults to a Claude model, so pick one for your provider
+(e.g. `gemini-3.5-flash-lite` — avoid `gemini-3.8-flash` for this loop, it's a reasoning model that can
+spend its whole token budget on hidden thinking and return empty content).
 
 ```bash
 git submodule update --init --recursive
@@ -137,6 +158,7 @@ Reads are public. Writes need `Authorization: Bearer $ADMIN_TOKEN` or an owner s
 | GET | `/api/vaults/:vault` | Live state + open owner alerts |
 | GET | `/api/vaults/:vault/{obligations,payees,commitments,inflows,decisions}` | Mirrors |
 | GET | `/api/vaults/:vault/trust` | Limit-over-time series (the trust chart) |
+| GET | `/api/vaults/:vault/live` | SSE: every stage of the agent loop as it happens (also at `/live.html?vault=…`) |
 | GET | `/api/decisions/:id` | Replay: stored record, recomputed hash, on-chain events |
 | POST | `/api/vaults/:vault/inflows` | `add-inflow`: expected inflow with confidence 0.5/0.8/0.95 |
 | POST | `/api/vaults/:vault/run` | `run`: run the agent now |

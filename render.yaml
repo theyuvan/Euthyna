@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: euthyna-worker
+    runtime: node
+    rootDir: worker
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ARC_RPC_URL
+        value: https://rpc.testnet.arc.network
+      - key: FACTORY_ADDRESS
+        sync: false
+      - key: FACTORY_START_BLOCK
+        sync: false
+      - key: EXECUTOR
+        value: circle
+      - key: CIRCLE_API_KEY
+        sync: false
+      - key: CIRCLE_ENTITY_SECRET
+        sync: false
+      - key: CIRCLE_WALLET_SET_ID
+        sync: false
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        value: gemini-3.5-flash-lite
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: PORT
+        value: 8787
