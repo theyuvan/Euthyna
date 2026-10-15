@@ -22,15 +22,18 @@ const schema = z.object({
   CIRCLE_FEE_LEVEL: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
   AGENT_PRIVATE_KEY: optionalHex,
 
-  // "anthropic" calls Claude directly. "xai" and "gemini" call Grok / Gemini via their
-  // OpenAI-compatible endpoints. Either way the model only proposes actions; policy.ts and the
-  // contract are what gate money.
-  LLM_PROVIDER: z.enum(["anthropic", "xai", "gemini"]).default("anthropic"),
+  // "anthropic" calls Claude directly. "xai", "gemini" and "openrouter" call their OpenAI-compatible
+  // endpoints. Either way the model only proposes actions; policy.ts and the contract are what gate
+  // money. "openrouter" is a second path to the same Gemini models, for when Google's own free-tier
+  // daily quota (20 req/day per model) is exhausted -- OpenRouter bills per token instead, no daily cap.
+  LLM_PROVIDER: z.enum(["anthropic", "xai", "gemini", "openrouter"]).default("anthropic"),
   ANTHROPIC_API_KEY: z.string().optional(),
   XAI_API_KEY: z.string().optional(),
   XAI_BASE_URL: z.string().url().default("https://api.x.ai/v1"),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_BASE_URL: z.string().url().default("https://generativelanguage.googleapis.com/v1beta/openai/"),
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
   LLM_MODEL: z.string().default("claude-opus-5-5"),
   LLM_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
   PROMPT_VERSION: z.string().default("euthyna-v1"),

@@ -71,6 +71,7 @@ const client = new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
 // Dummy fallback so construction never throws when the provider is "anthropic" and the other key is unset.
 const xai = new OpenAI({ apiKey: config.XAI_API_KEY || "unset", baseURL: config.XAI_BASE_URL });
 const gemini = new OpenAI({ apiKey: config.GEMINI_API_KEY || "unset", baseURL: config.GEMINI_BASE_URL });
+const openrouter = new OpenAI({ apiKey: config.OPENROUTER_API_KEY || "unset", baseURL: config.OPENROUTER_BASE_URL });
 
 /** What the model sees: the same facts as the snapshot, with amounts in USDC and times in ISO + hours. */
 export function llmView(s: Snapshot, p: Precomputed) {
@@ -152,6 +153,8 @@ export async function decide(view: unknown): Promise<LlmResult> {
       return decideOpenAICompatible(xai, config.XAI_API_KEY, "XAI_API_KEY", view, base);
     case "gemini":
       return decideOpenAICompatible(gemini, config.GEMINI_API_KEY, "GEMINI_API_KEY", view, base);
+    case "openrouter":
+      return decideOpenAICompatible(openrouter, config.OPENROUTER_API_KEY, "OPENROUTER_API_KEY", view, base);
     default:
       return decideAnthropic(view, base);
   }
@@ -202,7 +205,9 @@ async function decideOpenAICompatible(
   try {
     const res = await provider.chat.completions.create({
       model: config.LLM_MODEL,
-      max_completion_tokens: 16000,
+      // Real usage has been ~150-250 completion tokens; 2000 is generous headroom while staying well
+      // under what a low-credit OpenRouter account can afford (observed affordable budget: ~4444).
+      max_completion_tokens: 8000,
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: `Current state of the vault (JSON). Decide what to do now.\n\n${JSON.stringify(view, null, 2)}` },
