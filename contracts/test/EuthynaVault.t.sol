@@ -32,7 +32,8 @@ contract EuthynaVaultTest is Test {
             ownerDailyCeiling: 3_000 * U,
             minLiquid: 50 * U,
             grace: 1 hours,
-            payeeDelay: 1 hours
+            payeeDelay: 1 hours,
+            minHorizon: 1 hours
         });
     }
 
@@ -467,6 +468,28 @@ contract EuthynaVaultTest is Test {
         vm.stopPrank();
     }
 
+    /// minHorizon is per-vault: a demo/test vault can be deployed with a short one (floored by
+    /// ABSOLUTE_MIN_HORIZON) without touching a production vault's 1-hour-minimum bytecode.
+    function test_minHorizonIsPerVaultAndFloored() public {
+        EuthynaVault.Params memory p = _params();
+        p.minHorizon = 2 minutes;
+        vm.prank(owner);
+        EuthynaVault demo = factory.createVaultWithParams(agent, p);
+        usdc.mint(address(demo), 1_000 * U);
+
+        vm.prank(agent);
+        vm.expectRevert(EuthynaVault.BadHorizon.selector); // below the demo vault's own 2-minute floor
+        demo.sweep(10 * U, 1 minutes, H);
+
+        vm.prank(agent);
+        uint32 cid = demo.sweep(10 * U, 2 minutes, H); // allowed here, would revert on the 1-hour `vault`
+        assertEq(cid, 1);
+
+        p.minHorizon = 30 seconds; // below ABSOLUTE_MIN_HORIZON
+        vm.expectRevert(EuthynaVault.BadParam.selector);
+        factory.createVaultWithParams(agent, p);
+    }
+
     function test_materializeRecurring() public {
         vm.prank(owner);
         uint32 rid = vault.addRecurring(alice, 15 * U, 1 days, uint64(block.timestamp + 10 days));
@@ -509,7 +532,7 @@ contract ReentrancyTest is Test {
             IERC20(address(token)),
             address(atk),
             address(atk),
-            EuthynaVault.Params(25e6, 20_000, 1_000e6, 3_000e6, 0, 1 hours, 10 minutes)
+            EuthynaVault.Params(25e6, 20_000, 1_000e6, 3_000e6, 0, 1 hours, 10 minutes, 1 hours)
         );
         token.mint(address(v), 1_000e6);
         atk.setVault(v);

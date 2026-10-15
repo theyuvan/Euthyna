@@ -62,7 +62,7 @@ const outDir = fileURLToPath(new URL("../../contracts/out/", import.meta.url));
 const mock = JSON.parse(readFileSync(join(outDir, "MockUSDC.sol", "MockUSDC.json"), "utf8"));
 await test.setCode({ address: USDC, bytecode: mock.deployedBytecode.object });
 const mockAbi = mock.abi;
-const params = { baseLimit: parse("25"), rateBps: 20000, ownerCeiling: parse("1000"), ownerDailyCeiling: parse("3000"), minLiquid: parse("50"), grace: H, payeeDelay: H };
+const params = { baseLimit: parse("25"), rateBps: 20000, ownerCeiling: parse("1000"), ownerDailyCeiling: parse("3000"), minLiquid: parse("50"), grace: H, payeeDelay: H, minHorizon: H };
 const dep = await wait(await wallet(deployer).deployContract({ abi: factoryAbi, bytecode: factoryBytecode, args: [USDC, params] }));
 const factory = dep.contractAddress!;
 const { config } = await import("../src/config.js"); // already loaded by chain.ts: set directly

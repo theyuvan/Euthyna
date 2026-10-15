@@ -21,6 +21,7 @@ const params = {
   minLiquid: parse(env("FLOOR_USDC", "50")),
   grace: BigInt(env("GRACE_SECONDS", "3600")),
   payeeDelay: BigInt(env("PAYEE_DELAY_SECONDS", "3600")),
+  minHorizon: BigInt(env("MIN_HORIZON_SECONDS", "3600")),
 };
 const hash = await wallet.deployContract({ abi: factoryAbi, bytecode: factoryBytecode, args: [USDC, params] });
 const receipt = await publicClient.waitForTransactionReceipt({ hash });

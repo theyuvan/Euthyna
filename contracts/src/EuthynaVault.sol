@@ -70,11 +70,16 @@ contract EuthynaVault is ReentrancyGuard {
         uint128 minLiquid; // floor sweeps must leave liquid
         uint64 grace; // seconds after dueAt that still count as on time
         uint64 payeeDelay; // seconds before a new payee goes live
+        uint64 minHorizon; // shortest sweep horizon this vault allows, >= ABSOLUTE_MIN_HORIZON
     }
 
     // -------------------------------------------------------------- constants
 
-    uint64 public constant MIN_HORIZON = 1 hours;
+    // Floor under every vault's minHorizon, so a sweep can never be opened and settled instantly
+    // (the point of the MIN_HORIZON/MAX_HORIZON pair is to make loophole #14 — sweep then redeem
+    // immediately for free credit — structurally impossible). Production vaults should set
+    // minHorizon to 1 hours or more; a shorter value belongs on a test vault only, never a real one.
+    uint64 public constant ABSOLUTE_MIN_HORIZON = 1 minutes;
     uint64 public constant MAX_HORIZON = 14 days;
     uint64 public constant MIN_PAYEE_DELAY = 10 minutes;
     uint64 public constant MISS_COOLDOWN = 24 hours;
@@ -99,6 +104,7 @@ contract EuthynaVault is ReentrancyGuard {
     uint128 public minLiquid;
     uint64 public grace;
     uint64 public payeeDelay;
+    uint64 public minHorizon;
 
     uint256 public score; // USDC units
     uint64 public cooldownUntil;
@@ -201,6 +207,7 @@ contract EuthynaVault is ReentrancyGuard {
     constructor(IERC20 usdc_, address owner_, address agent_, Params memory p) {
         if (address(usdc_) == address(0) || owner_ == address(0)) revert ZeroAddress();
         if (p.payeeDelay < MIN_PAYEE_DELAY) revert BadParam();
+        if (p.minHorizon < ABSOLUTE_MIN_HORIZON || p.minHorizon > MAX_HORIZON) revert BadParam();
         usdc = usdc_;
         owner = owner_;
         agent = agent_;
@@ -211,6 +218,7 @@ contract EuthynaVault is ReentrancyGuard {
         minLiquid = p.minLiquid;
         grace = p.grace;
         payeeDelay = p.payeeDelay;
+        minHorizon = p.minHorizon;
         dayStart = uint64(block.timestamp);
         emit AgentChanged(address(0), agent_);
     }
@@ -398,7 +406,7 @@ contract EuthynaVault is ReentrancyGuard {
         if (amount == 0) revert ZeroAmount();
         if (block.timestamp < cooldownUntil) revert InCooldown();
         if (_openCids.length >= MAX_OPEN_COMMITMENTS) revert TooManyOpen();
-        if (horizon < MIN_HORIZON || horizon > MAX_HORIZON) revert BadHorizon();
+        if (horizon < minHorizon || horizon > MAX_HORIZON) revert BadHorizon();
         uint256 liq = liquid();
         if (liq < amount || liq - amount < minLiquid) revert BelowFloor();
 

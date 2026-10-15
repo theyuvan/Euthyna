@@ -17,11 +17,20 @@ export function subscribe(vaultId: string, res: Response) {
   };
 }
 
+// FinalAction and similar payloads carry raw bigint fields (amount, horizonSec). JSON.stringify
+// can't serialize those on its own, so every stringify here goes through this replacer.
+const jsonSafe = (_key: string, value: unknown) => (typeof value === "bigint" ? value.toString() : value);
+
 function publish(vaultId: string, stage: string, detail: unknown, at: string) {
   const set = subscribers.get(vaultId);
   if (!set || set.size === 0) return;
-  const line = `data: ${JSON.stringify({ stage, detail, at })}\n\n`;
-  for (const res of set) res.write(line);
+  try {
+    const line = `data: ${JSON.stringify({ stage, detail, at }, jsonSafe)}\n\n`;
+    for (const res of set) res.write(line);
+  } catch (e) {
+    // A bad payload must never take down the run that's emitting it.
+    console.error("[events] failed to publish", vaultId, stage, e);
+  }
 }
 
 /** Logs one stage of an agent run, for the audit trail and the live stream. Never throws. */
@@ -29,7 +38,7 @@ export async function emit(vaultId: string, stage: string, detail: unknown): Pro
   const at = new Date().toISOString();
   publish(vaultId, stage, detail, at);
   try {
-    await q("insert into agent_events (vault_id, stage, detail) values ($1,$2,$3)", [vaultId, stage, JSON.stringify(detail ?? null)]);
+    await q("insert into agent_events (vault_id, stage, detail) values ($1,$2,$3)", [vaultId, stage, JSON.stringify(detail ?? null, jsonSafe)]);
   } catch (e) {
     // Logging must never break the actual run.
     console.error("[events] failed to record", vaultId, stage, e);

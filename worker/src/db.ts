@@ -3,6 +3,11 @@ import { config } from "./config.js";
 
 // numeric and int8 come back as strings: exact decimals, no float rounding.
 export const pool = new pg.Pool({ connectionString: config.DATABASE_URL, max: 10 });
+// Idle pooled connections can be dropped by the server (Supabase's pooler recycles them) and emit
+// 'error' with no request in flight. Without a listener here, that's an unhandled EventEmitter
+// error and Node kills the whole process. A dropped idle connection is not fatal: pg removes it
+// from the pool and the next query gets a fresh one.
+pool.on("error", (err) => console.error("[db] idle client error (pool continues):", err.message));
 
 export async function q<T extends pg.QueryResultRow = any>(text: string, params: unknown[] = []): Promise<T[]> {
   const res = await pool.query<T>(text, params as any[]);

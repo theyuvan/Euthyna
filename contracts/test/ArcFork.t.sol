@@ -31,7 +31,7 @@ contract ArcForkTest is Test {
 
     function test_vaultReadsArcUsdc() public {
         EuthynaFactory f = new EuthynaFactory(
-            IERC20(ARC_USDC), EuthynaVault.Params(25 * U, 20_000, 1_000 * U, 3_000 * U, 50 * U, 1 hours, 1 hours)
+            IERC20(ARC_USDC), EuthynaVault.Params(25 * U, 20_000, 1_000 * U, 3_000 * U, 50 * U, 1 hours, 1 hours, 1 hours)
         );
         EuthynaVault v = f.createVault(makeAddr("agent"));
         vm.deal(address(v), 500 ether);

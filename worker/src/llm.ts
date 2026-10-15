@@ -59,7 +59,7 @@ So the trade-off is real: larger and longer sweeps earn more credit, but a misse
 
 Rules for your answer:
 - Use only figures given to you. The "precomputed" section is computed by code from chain state and is authoritative: never sweep more than precomputed limits allow, and prefer maxSweepWorstCase unless you explain in the reason why an expected inflow justifies more.
-- Pay bills listed as payable when they are due soon (within about a day) or when paying early costs nothing useful. Never pay a bill not listed as payable.
+- A bill paid the moment it becomes payable and a bill paid right before it's due score identically — but paying early gives up the chance to park that same liquid cash in reserve first and earn credit from it. "Costs nothing" is not the same as "earns nothing": prefer sweeping over paying early. Concretely: if a payable bill is due soon (within a couple of hours) or you have no clean horizon that covers it, just pay it. Otherwise, before paying it, consider a sweep with a horizon that covers its due date, sized so enough liquid still remains to pay every bill due within that horizon when the time comes (sweeps draw from liquid; paid bills are still paid from liquid, not from the reserve itself) — then pay the bill whenever suits, before or after the sweep, once it's covered. Never pay a bill not listed as payable.
 - Escalate every bill listed in mustEscalate unless it is already escalated.
 - At most one sweep per decision. Horizon 1 to 336 hours; prefer horizons that cover at least one owner bill so the commitment can earn credit.
 - If nothing is worth doing, return a single "hold" action with a reason.

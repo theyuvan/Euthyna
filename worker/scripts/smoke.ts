@@ -41,7 +41,7 @@ const created = await wait(
     functionName: "createVaultWithParams",
     args: [
       agent.address,
-      { baseLimit: parse("25"), rateBps: 20000, ownerCeiling: parse("1000"), ownerDailyCeiling: parse("3000"), minLiquid: parse("1"), grace: 3600n, payeeDelay: 600n },
+      { baseLimit: parse("25"), rateBps: 20000, ownerCeiling: parse("1000"), ownerDailyCeiling: parse("3000"), minLiquid: parse("1"), grace: 3600n, payeeDelay: 600n, minHorizon: 3600n },
     ],
   }),
 );

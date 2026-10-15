@@ -21,7 +21,8 @@ contract Deploy is Script {
             ownerDailyCeiling: uint128(vm.envOr("OWNER_DAILY_CEILING_USDC", uint256(3_000))) * U,
             minLiquid: uint128(vm.envOr("FLOOR_USDC", uint256(50))) * U,
             grace: uint64(vm.envOr("GRACE_SECONDS", uint256(1 hours))),
-            payeeDelay: uint64(vm.envOr("PAYEE_DELAY_SECONDS", uint256(1 hours)))
+            payeeDelay: uint64(vm.envOr("PAYEE_DELAY_SECONDS", uint256(1 hours))),
+            minHorizon: uint64(vm.envOr("MIN_HORIZON_SECONDS", uint256(1 hours)))
         });
         address agent = vm.envOr("AGENT_ADDRESS", address(0));
 
