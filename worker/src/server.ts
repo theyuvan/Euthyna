@@ -1,7 +1,8 @@
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import express, { type NextFunction, type Request, type Response } from "express";
-import { getAddress, isAddress, verifyMessage, type Hex } from "viem";
+import multer from "multer";
+import { encodeFunctionData, getAddress, isAddress, verifyMessage, type Hex } from "viem";
 import { z } from "zod";
 import { vaultAbi } from "./abi.js";
 import { runVault } from "./agent.js";
@@ -11,8 +12,10 @@ import { config } from "./config.js";
 import { one, q, vaultByAddress, type VaultRow } from "./db.js";
 import { subscribe } from "./events.js";
 import { circle, localAgentAddress } from "./executor.js";
+import { extractInvoice, matchPayee, registerExtractedObligation } from "./invoice.js";
 import { indexNow, requestRun } from "./scheduler.js";
 import { settleVault } from "./settler.js";
+import { obligationRef, parse } from "./units.js";
 import { fmt } from "./units.js";
 
 /**
@@ -329,6 +332,116 @@ export function createServer() {
         [req.vault.id, payee.toLowerCase(), b.data.displayName ?? null, b.data.aliases ?? [], b.data.aliases !== undefined],
       );
       res.json({ ok: true });
+    }),
+  );
+
+  // ----------------------------------------------------- onboarding: prepare owner transactions
+  //
+  // addPayee / registerObligation / cancelObligation are owner-only on the contract, so the owner's
+  // own key has to sign them — the backend never holds a real owner's private key. These routes do
+  // the validation and encoding, then hand back {to, data} for the owner to sign (MetaMask, once the
+  // dashboard exists; `npm run onboard` with OWNER_PRIVATE_KEY in the meantime).
+
+  const AddPayeeReq = z.object({
+    address: z.string().refine(isAddress, "bad address"),
+    maxPerInvoiceUsdc: z.string().regex(/^\d+(\.\d{1,6})?$/),
+    maxPerMonthUsdc: z.string().regex(/^\d+(\.\d{1,6})?$/),
+    displayName: z.string().max(120).optional(),
+  });
+  app.post(
+    "/api/vaults/:vault/onboard/payee",
+    loadVault,
+    requireOwner("onboard-payee"),
+    h(async (req: VReq, res) => {
+      const b = AddPayeeReq.safeParse(req.body);
+      if (!b.success) return res.status(400).json({ error: z.prettifyError(b.error) });
+      const payee = getAddress(b.data.address);
+      const data = encodeFunctionData({
+        abi: vaultAbi,
+        functionName: "addPayee",
+        args: [payee, parse(b.data.maxPerInvoiceUsdc), parse(b.data.maxPerMonthUsdc)],
+      });
+      if (b.data.displayName) {
+        await q(
+          `insert into payees (vault_id, address, display_name) values ($1,$2,$3)
+           on conflict (vault_id, address) do update set display_name = excluded.display_name`,
+          [req.vault.id, payee.toLowerCase(), b.data.displayName],
+        );
+      }
+      res.json({ to: getAddress(req.vault.address), data, functionName: "addPayee", args: { payee, maxPerInvoiceUsdc: b.data.maxPerInvoiceUsdc, maxPerMonthUsdc: b.data.maxPerMonthUsdc } });
+    }),
+  );
+
+  const RegisterObligationReq = z.object({
+    payee: z.string().refine(isAddress, "bad address"),
+    amountUsdc: z.string().regex(/^\d+(\.\d{1,6})?$/),
+    dueAt: z.iso.datetime(),
+    invoiceNumber: z.string().min(1).max(120),
+    note: z.string().max(500).optional(),
+  });
+  app.post(
+    "/api/vaults/:vault/onboard/obligation",
+    loadVault,
+    requireOwner("onboard-obligation"),
+    h(async (req: VReq, res) => {
+      const b = RegisterObligationReq.safeParse(req.body);
+      if (!b.success) return res.status(400).json({ error: z.prettifyError(b.error) });
+      const payee = getAddress(b.data.payee);
+      const dueAtSec = BigInt(Math.floor(new Date(b.data.dueAt).getTime() / 1000));
+      if (dueAtSec <= BigInt(Math.floor(Date.now() / 1000))) return res.status(400).json({ error: "dueAt must be in the future" });
+      const ref = obligationRef(payee, b.data.invoiceNumber);
+      const existing = await one("select 1 from obligations where vault_id = $1 and ref = $2", [req.vault.id, ref]);
+      if (existing) return res.status(409).json({ error: "this payee + invoice number was already used" });
+      const data = encodeFunctionData({
+        abi: vaultAbi,
+        functionName: "registerObligation",
+        args: [payee, parse(b.data.amountUsdc), dueAtSec, ref],
+      });
+      res.json({ to: getAddress(req.vault.address), data, functionName: "registerObligation", ref, args: { payee, amountUsdc: b.data.amountUsdc, dueAt: b.data.dueAt, invoiceNumber: b.data.invoiceNumber } });
+    }),
+  );
+
+  app.post(
+    "/api/vaults/:vault/onboard/obligations/:id/cancel",
+    loadVault,
+    requireOwner("onboard-cancel"),
+    h(async (req: VReq, res) => {
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: "bad id" });
+      const data = encodeFunctionData({ abi: vaultAbi, functionName: "cancelObligation", args: [id] });
+      res.json({ to: getAddress(req.vault.address), data, functionName: "cancelObligation", args: { id } });
+    }),
+  );
+
+  // --------------------------------------------------------------------- invoice intake (vision)
+
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
+  app.post(
+    "/api/vaults/:vault/invoices",
+    loadVault,
+    requireOwner("invoice-upload"),
+    upload.single("invoice"),
+    h(async (req: VReq, res) => {
+      const file = (req as any).file as Express.Multer.File | undefined;
+      if (!file) return res.status(400).json({ error: "no file (field name must be 'invoice')" });
+      if (!/^image\/(png|jpe?g|webp)$/.test(file.mimetype)) return res.status(400).json({ error: "only PNG/JPEG/WEBP are supported right now" });
+
+      const extraction = await extractInvoice(file.buffer, file.mimetype);
+      if (extraction.error || !extraction.data) {
+        return res.status(502).json({ error: extraction.error ?? "extraction failed" });
+      }
+
+      const match = await matchPayee(req.vault.id, extraction.data.payeeName);
+      if (!match) {
+        await q(
+          `insert into owner_alerts (vault_id, kind, message, data) values ($1,'invoice_no_match',$2,$3)`,
+          [req.vault.id, `Invoice for "${extraction.data.payeeName}" doesn't match any saved payee alias. Add the alias, or enter the bill by hand.`, JSON.stringify(extraction.data)],
+        );
+        return res.json({ matched: false, extracted: extraction.data });
+      }
+
+      const result = await registerExtractedObligation(req.vault, match, extraction.data, file);
+      res.json({ matched: true, payee: match.address, extracted: extraction.data, ...result });
     }),
   );
 
