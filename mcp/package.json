@@ -1,0 +1,48 @@
+{
+  "name": "euthyna-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Euthyna: let any AI assistant read and audit an AI treasurer on Arc",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "euthyna-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs",
+    "prepare": "tsc"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "viem": "^2.57.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-agent",
+    "arc",
+    "circle",
+    "usdc",
+    "treasury"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theyuvan/Euthyna.git",
+    "directory": "mcp"
+  }
+}
