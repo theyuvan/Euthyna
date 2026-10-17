@@ -17,6 +17,7 @@ const TOC = [
   { id: "console", label: "Using the console" },
   { id: "safety", label: "Safety rules" },
   { id: "faq", label: "FAQ" },
+  { id: "mcp", label: "AI assistants (MCP)" },
   { id: "developers", label: "For developers" },
 ];
 
@@ -201,7 +202,42 @@ export default function DocsPage() {
             </Faq>
           </Section>
 
-          <Section id="developers" n="07" title="For developers">
+          <Section id="mcp" n="07" title="Use with AI assistants (MCP)">
+            <P>
+              Euthyna ships an <B>MCP server</B>, so you can ask Claude, Cursor or any{" "}
+              <Ext href="https://modelcontextprotocol.io">Model Context Protocol</Ext> client about a vault in plain
+              English: its cash, the agent&apos;s decisions, its trust record. It can also verify any decision&apos;s hash
+              for you. It is <B>read-only</B> and holds no keys, so it can&apos;t move money.
+            </P>
+            <Sub>Set up (Claude Code)</Sub>
+            <pre className="border border-border bg-surface px-4 py-3 text-xs font-data text-ink overflow-x-auto">
+{`git clone https://github.com/theyuvan/Euthyna
+cd Euthyna/mcp && npm install
+claude mcp add euthyna -- node "$(pwd)/dist/index.js"`}
+            </pre>
+            <P>
+              Claude Desktop, Cursor and HTTP setup are in the{" "}
+              <Ext href={`${REPO}/blob/main/mcp/README.md`}>MCP guide</Ext>.
+            </P>
+            <Sub>Then ask</Sub>
+            <ul className="space-y-2 text-sm text-ink-dim">
+              <Bullet>&ldquo;What&apos;s the state of the Euthyna production vault?&rdquo;</Bullet>
+              <Bullet>&ldquo;What did the agent decide in its last 5 runs, and why?&rdquo;</Bullet>
+              <Bullet>&ldquo;Has the agent kept its promises? Show its trust history.&rdquo;</Bullet>
+              <Bullet>&ldquo;Verify the agent&apos;s last decision that moved money.&rdquo;</Bullet>
+            </ul>
+            <div className="border border-border">
+              <dl className="text-xs font-data divide-y divide-border">
+                <Row k="Read" v="get_public_stats, list_businesses, list_vaults, get_vault, list_bills, list_payees, list_commitments, get_trust_history, list_decisions, get_decision" />
+                <Row k="Verify" v="verify_decision: re-hashes a decision record locally and checks it against the chain" />
+                <Row k="Build (unsigned)" v="build_settle_tx, build_add_payee_tx, build_register_bill_tx: you sign them in your own wallet" />
+                <Row k="Resources" v="how-it-works docs, contract addresses, euthyna://vault/{address}" />
+                <Row k="Prompts" v="treasury_report, audit_decision, explain_trust" />
+              </dl>
+            </div>
+          </Section>
+
+          <Section id="developers" n="08" title="For developers">
             <div className="border border-border">
               <dl className="text-xs font-data divide-y divide-border">
                 <Row k="Network" v="Arc testnet · chain 5042002" />
@@ -215,6 +251,7 @@ export default function DocsPage() {
               <Bullet><Ext href={`${REPO}/blob/main/docs/contract.md`}>contract.md</Ext>: mechanism, scoring, the 22-attack loophole audit, deployed addresses</Bullet>
               <Bullet><Ext href={`${REPO}/blob/main/docs/backend.md`}>backend.md</Ext>: the agent loop, LLM chain, setup, full API reference</Bullet>
               <Bullet><Ext href={`${REPO}/blob/main/docs/frontend.md`}>frontend.md</Ext>: pages, wallets, running and deploying the console</Bullet>
+              <Bullet><Ext href={`${REPO}/blob/main/mcp/README.md`}>mcp/README.md</Ext>: the MCP server, its tools and client setup</Bullet>
             </ul>
           </Section>
         </main>

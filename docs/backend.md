@@ -159,3 +159,6 @@ Reads are public. Writes need `Authorization: Bearer $ADMIN_TOKEN` or an owner s
 | POST | `/api/vaults/:vault/alerts/:id/resolve` | `resolve-alert` |
 | POST | `/api/agent-wallets` | Onboarding: create an agent wallet, then the owner calls `factory.createVault(agent)` |
 | POST | `/webhooks/circle` | Nudges the indexer |
+
+AI assistants can use these read endpoints through the [Euthyna MCP server](../mcp/README.md): vault state,
+decisions, commitments, trust history and decision verification as MCP tools.
