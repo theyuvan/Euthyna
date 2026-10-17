@@ -98,7 +98,7 @@ Every claim below can be checked on [Arcscan](https://testnet.arcscan.app) or ag
 | Payments through a real Circle SCA wallet | ✅ verified end to end on Arc testnet (Gas Station-sponsored, ERC-4337) |
 | Decision hash + replay | ✅ live; the Replay page re-hashes the record **in the viewer's browser** and checks it against the stored, server-recomputed and on-chain hashes |
 | Live reasoning stream (`/api/vaults/:id/live`, `/live.html`) | ✅ live over SSE |
-| LLM provider | ✅ pluggable: Anthropic, xAI, Gemini or OpenRouter. Currently running OpenRouter's free `liquid/lfm-2.5-2.6b`, because Gemini's free-tier daily quota ran out. Policy never trusts a number from the model, so a small model can't move money wrongly. |
+| LLM | ✅ an automatic fallback chain of 8 free models (5 Gemini, 3 OpenRouter), each tested on a real decision; a failing or quota-exhausted model hands over to the next, and the record shows which model answered. Policy never trusts a number from the model. |
 | Invoice OCR | ✅ vision extraction, exact payee matching and on-chain registration, verified live once ([`0x4d61…0462`](https://testnet.arcscan.app/tx/0x4d614e69748dfcf6d41578506af8f857230a2189ce41373004e7f9b43a360462)). The no-match path (owner alert, nothing on-chain) is code-reviewed but not live-tested. |
 | Frontend | ✅ landing page and 7 console pages on live data, with MetaMask wallet connect |
 | RPC resilience | ✅ moved to `rpc.testnet.arc.io` after the old domain was retired, with a Blockdaemon fallback and Multicall3-batched reads; outages surface as a clean 503 the frontend auto-retries |

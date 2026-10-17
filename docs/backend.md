@@ -33,14 +33,39 @@ owner (MetaMask) ──owner calls──▶ EuthynaVault ◀──agent calls─
 The loops need an always-on machine. On a laptop, sleep pauses them; they resume on the next tick once the
 network is back. That's why the backend is meant to be hosted (see `render.yaml`).
 
-## LLM providers
+## LLM providers and the fallback chain
 
-`LLM_PROVIDER` selects Anthropic, xAI, Gemini or OpenRouter; set the matching `*_API_KEY`. `LLM_MODEL`
-defaults to a Claude model, so pick one for your provider.
+The agent and the invoice reader can use Anthropic, xAI, Gemini or OpenRouter; set the matching
+`*_API_KEY`. For a single model, set `LLM_PROVIDER` and `LLM_MODEL`.
 
-- **Currently running:** OpenRouter's free `liquid/lfm-2.5-2.6b:free`, because Gemini's free-tier daily
-  quota ran out. The policy layer never trusts a number from the model, so a small model can't move money
-  wrongly. At worst its narrative text is weaker.
+### The chain
+
+`LLM_CHAIN` lists models in order (`provider:model,provider:model,…`). Each decision walks it until one
+model returns a valid, schema-checked decision.
+- **Skipped:** models without a key, and models cooling down after a rate limit or quota error.
+- **Cooldowns:** 10 minutes for a rate limit, 3 hours for a daily quota, 6 hours for an unknown model.
+- **Fail fast:** each attempt times out after 60 seconds, with one retry.
+- **Audit trail:** failed attempts are kept in the decision record as `llm.fallbacks`, next to the model
+  that actually served, and all of it is hashed. If every model fails, the policy's safety net still pays
+  bills due within `AUTO_PAY_WITHIN_HOURS`.
+
+**The chain we run.** Every model was tested against a real agent prompt. Each Gemini model has its own free
+daily quota, so the chain gives roughly 150 free decisions a day.
+
+```
+LLM_CHAIN=gemini:gemini-3.5-flash,gemini:gemini-3-flash-preview,gemini:gemini-flash-latest,gemini:gemini-3.1-flash-lite,gemini:gemini-3.5-flash-lite,openrouter:nvidia/nemotron-3.5-super-vl:free,openrouter:dots-studio/dots-3-note-preview:free,openrouter:liquid/lfm-2.5-2.6b:free
+```
+
+`gemini-3.5-flash` leads because it reasons about the sweep-versus-pay trade-off correctly. The small
+`liquid` model is last: it's reliable, but it once declined a safe sweep over a miscalculation. The policy
+layer never trusts a number from any model, so a weaker model can't move money wrongly, only less well.
+
+Excluded after testing:
+- `gemini-2.5-flash` and `gemini-2.5-flash-lite` return 404 ("no longer available to new users");
+- `xingchen-agi/xing4.0-29b:free` timed out.
+
+`gemini-3.8-flash` and NVIDIA's 120B reasoning model are excluded too. They spend their token budget on
+hidden reasoning.
 - **Avoid reasoning models** (e.g. `gemini-3.8-flash`, NVIDIA's free reasoning models) for this loop. They
   can spend their whole token budget on hidden thinking and return empty content.
 - **No `temperature: 0`.** Claude Opus 5.5 doesn't accept sampling parameters. Determinism comes from

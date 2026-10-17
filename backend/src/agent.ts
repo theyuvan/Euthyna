@@ -119,6 +119,7 @@ async function runLocked(v: VaultRow, trigger: string): Promise<RunSummary> {
       stopReason: llm.stopReason,
       error: llm.error,
       output: llm.output,
+      ...(llm.fallbacks?.length ? { fallbacks: llm.fallbacks } : {}),
     },
     policy,
   };

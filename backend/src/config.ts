@@ -41,6 +41,8 @@ const schema = z.object({
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
   LLM_MODEL: z.string().default("claude-opus-5-5"),
+  // Optional ordered fallback list, "provider:model,provider:model,…" — see llm-chain.ts.
+  LLM_CHAIN: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
   LLM_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
   PROMPT_VERSION: z.string().default("euthyna-v1"),
   // Test only: read the decision from this JSON file instead of calling the model. Recorded as model "stub".
