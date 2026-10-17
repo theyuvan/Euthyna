@@ -39,6 +39,9 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <Link href="/docs" className="block px-4 py-2.5 text-xs tracking-wide border-t border-border text-ink-dim hover:text-ink hover:bg-surface">
+        DOCS ↗
+      </Link>
       <div className="px-4 py-3 border-t border-border text-[10px] text-ink-dim leading-relaxed">
         Arc testnet · chain 5042002
         <br />

@@ -14,6 +14,7 @@ system is in [design.md](design.md).
 | `/console/decisions` | **Decisions**: every agent run, with what it proposed and its decision hash | `/decisions` |
 | `/console/replay` | **Replay**: re-hashes a decision record in the browser and compares it with the stored and on-chain hash | `/api/decisions/:id` |
 | `/console/escalations` | **Escalations**: approve or cancel bills over the limit, signed by the owner's wallet | `/obligations` + owner routes |
+| `/docs` | **Docs**: what Euthyna is, how it works, the 5-minute setup, console guide, safety rules, FAQ, developer links | static |
 | `/console/onboard` | **Onboard**: create a vault (with an optional public business name), add a payee, register a first bill, all signed by your wallet. Guide: [onboarding.md](onboarding.md) | factory + owner routes |
 | `/console/stats` | **Public Stats**: totals across real, non-test vaults | `/api/stats` |
 

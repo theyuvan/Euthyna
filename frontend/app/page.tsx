@@ -8,7 +8,6 @@ import { Orbit } from "@/components/orbit";
 
 const REAL_HIT_TX = "0x218692358b25492f59c4958b3960f9688ded4239473263809e5024d0d909d5f1";
 const REAL_HIT_VAULT = "0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5";
-const ONBOARDING_GUIDE = "https://github.com/theyuvan/Euthyna/blob/main/docs/onboarding.md";
 
 export default function LandingPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -30,12 +29,9 @@ export default function LandingPage() {
           <a href="#businesses" className="hover:text-ink">
             BUSINESSES
           </a>
-          <a href="#proof" className="hover:text-ink">
-            PROOF
-          </a>
-          <a href="#how" className="hover:text-ink">
-            HOW IT WORKS
-          </a>
+          <Link href="/docs" className="hover:text-ink">
+            DOCS
+          </Link>
           <Link href="/console" className="border border-good text-good px-3 py-1.5 hover:bg-good hover:text-bg">
             LAUNCH CONSOLE
           </Link>
@@ -144,9 +140,9 @@ export default function LandingPage() {
           <Link href="/console/onboard" className="border border-good text-good px-5 py-3 text-xs font-data uppercase hover:bg-good hover:text-bg">
             Put your treasury on Euthyna
           </Link>
-          <a href={ONBOARDING_GUIDE} target="_blank" rel="noreferrer" className="text-xs font-data text-ink-dim hover:text-ink underline decoration-border underline-offset-2">
+          <Link href="/docs#get-started" className="text-xs font-data text-ink-dim hover:text-ink underline decoration-border underline-offset-2">
             5-minute guide
-          </a>
+          </Link>
           <span className="text-[10px] text-ink-dim font-data">Test vaults are excluded. Each business is one owner wallet.</span>
         </div>
       </section>
