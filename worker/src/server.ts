@@ -6,7 +6,7 @@ import { encodeFunctionData, getAddress, isAddress, verifyMessage, type Hex } fr
 import { z } from "zod";
 import { vaultAbi } from "./abi.js";
 import { runVault } from "./agent.js";
-import { publicClient, txUrl } from "./chain.js";
+import { publicClient, txUrl, withRpcErrorContext, RpcUnavailableError } from "./chain.js";
 import { canonicalJson, hashCanonical } from "./canonical.js";
 import { config } from "./config.js";
 import { one, q, vaultByAddress, type VaultRow } from "./db.js";
@@ -133,20 +133,22 @@ export function createServer() {
     loadVault,
     h(async (req: VReq, res) => {
       const at = { address: getAddress(req.vault.address), abi: vaultAbi } as const;
-      const [liquid, reserve, score, limit, dailyCap, dailySpent, cooldownUntil, paused, minLiquid, ownerCeiling, owner, agent] = await Promise.all([
-        publicClient.readContract({ ...at, functionName: "liquid" }),
-        publicClient.readContract({ ...at, functionName: "reserve" }),
-        publicClient.readContract({ ...at, functionName: "score" }),
-        publicClient.readContract({ ...at, functionName: "autonomousLimit" }),
-        publicClient.readContract({ ...at, functionName: "dailyCap" }),
-        publicClient.readContract({ ...at, functionName: "currentDailySpent" }),
-        publicClient.readContract({ ...at, functionName: "cooldownUntil" }),
-        publicClient.readContract({ ...at, functionName: "paused" }),
-        publicClient.readContract({ ...at, functionName: "minLiquid" }),
-        publicClient.readContract({ ...at, functionName: "ownerCeiling" }),
-        publicClient.readContract({ ...at, functionName: "owner" }),
-        publicClient.readContract({ ...at, functionName: "agent" }),
-      ]);
+      const [liquid, reserve, score, limit, dailyCap, dailySpent, cooldownUntil, paused, minLiquid, ownerCeiling, owner, agent] = await withRpcErrorContext(() =>
+        Promise.all([
+          publicClient.readContract({ ...at, functionName: "liquid" }),
+          publicClient.readContract({ ...at, functionName: "reserve" }),
+          publicClient.readContract({ ...at, functionName: "score" }),
+          publicClient.readContract({ ...at, functionName: "autonomousLimit" }),
+          publicClient.readContract({ ...at, functionName: "dailyCap" }),
+          publicClient.readContract({ ...at, functionName: "currentDailySpent" }),
+          publicClient.readContract({ ...at, functionName: "cooldownUntil" }),
+          publicClient.readContract({ ...at, functionName: "paused" }),
+          publicClient.readContract({ ...at, functionName: "minLiquid" }),
+          publicClient.readContract({ ...at, functionName: "ownerCeiling" }),
+          publicClient.readContract({ ...at, functionName: "owner" }),
+          publicClient.readContract({ ...at, functionName: "agent" }),
+        ]),
+      );
       const alerts = await q("select * from owner_alerts where vault_id = $1 and resolved_at is null order by created_at desc", [req.vault.id]);
       res.json({
         address: req.vault.address,
@@ -194,7 +196,9 @@ export function createServer() {
     "/api/vaults/:vault/trust",
     loadVault,
     h(async (req: VReq, res) => {
-      const base = await publicClient.readContract({ address: getAddress(req.vault.address), abi: vaultAbi, functionName: "baseLimit" });
+      const base = await withRpcErrorContext(() =>
+        publicClient.readContract({ address: getAddress(req.vault.address), abi: vaultAbi, functionName: "baseLimit" }),
+      );
       const points = await q(
         `select block_time as at, (args->>'cid')::int as cid, (args->>'hit')::boolean as hit,
                 round((args->>'credit')::numeric / 1e6, 6) as credit, round((args->>'newScore')::numeric / 1e6, 6) as score,
@@ -547,6 +551,9 @@ export function createServer() {
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error("[api]", err);
+    if (err instanceof RpcUnavailableError) {
+      return res.status(503).json({ error: err.message, code: "RPC_UNAVAILABLE" });
+    }
     res.status(500).json({ error: err instanceof Error ? err.message : "internal error" });
   });
   return app;
