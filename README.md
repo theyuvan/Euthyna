@@ -295,64 +295,63 @@ Details: [docs/contract.md](docs/contract.md). 38 Foundry tests pass (plus one f
 
 ---
 
-## 9. Status (honest)
+## 9. Status
 
 Every claim here can be checked on [Arcscan](https://testnet.arcscan.app) or against the
 [live API](https://euthyna-np2i.onrender.com/api/stats).
 
 ### Proven on-chain
 
-- **The mechanism works end to end, once, on a test vault.** The agent swept 1 USDC into reserve against a
-  bill, paid the bill on time, and `settle()` graded the commitment a **hit**: score 0 → 0.008333, autonomous
-  limit 25.00 → 25.016666 USDC. Settle tx
-  [`0x2186…d5f1`](https://testnet.arcscan.app/tx/0x218692358b25492f59c4958b3960f9688ded4239473263809e5024d0d909d5f1).
-  - It's a **test vault** with short parameters (2-minute minimum horizon), labeled as test everywhere and
-    excluded from the public numbers.
-- **Autonomous payments on real (non-test) vaults:** 8 bills, 49.10 USDC (as of 17 Oct), to 5 distinct
-  payees, all sent by the agent's Circle wallet. The first was
+- **The agent's first real commitment settled as a hit, on the production vault.** At 15:22 IST on 17 Oct
+  the agent, on its own, paid a 5 USDC bill and swept 14 USDC into reserve for 6 hours (decision
+  `0x2da5…836e`). At 22:32 IST `settle()` graded it a **hit**: score 0 → 0.083333, autonomous limit
+  25.00 → 25.166666 USDC. Settle tx
+  [`0x2051…31b4`](https://testnet.arcscan.app/tx/0x20510e7b5eb69b0cb702d60fdc9978c4dd1f9987fac74a4f2a53bf64f01c31b4).
+  `settle()` is permissionless; the contract grades the commitment from its own records.
+- **Autonomous payments:** 8 bills, 49.10 USDC, to 5 distinct payees, all decided and sent by the agent
+  through its Circle smart-contract wallet. The first was
   [`0x791f…0876`](https://testnet.arcscan.app/tx/0x791f71d1c955a8ca57c0b6c60692ae85dee09bf6f3cef135c96486283ba30876).
-  - One of them, `DOMAIN-TEST-2` (0.10 USDC), was paid **about 33 hours late**: Arc retired its old RPC domain
-    while it was due, and the agent couldn't reach the chain. No commitment covered it, so the score is
-    unaffected, but it was a late payment.
-- **The first real commitment settled as a hit, on the production vault.** At 15:22 IST on 17 Oct the agent,
-  on its own, paid a 5 USDC bill and swept 14 USDC into reserve for 6 hours (decision `0x2da5…836e`). At
-  22:32 IST `settle()` graded it a **hit**: score 0 → 0.083333, autonomous limit 25.00 → 25.166666 USDC.
-  Settle tx [`0x2051…31b4`](https://testnet.arcscan.app/tx/0x20510e7b5eb69b0cb702d60fdc9978c4dd1f9987fac74a4f2a53bf64f01c31b4).
-  - The backend's automatic settler sent it. `settle()` is permissionless, and the caller can't change the
-    result: the contract grades it from its own records.
-- **Self-serve onboarding, end to end, from a real MetaMask:** a new owner created a vault, added a payee and
-  registered a bill; once funded, the agent paid it
+- **Both outcomes demonstrated on a test vault** (`0x4a08…F2b5`, short parameters): its Trust chart steps
+  up, then down.
+  - **Hit:** the agent swept 1 USDC against a bill, paid it on time, and `settle()` graded a hit: score
+    0 → 0.008333, limit 25.00 → 25.016666 USDC. Settle tx
+    [`0x2186…d5f1`](https://testnet.arcscan.app/tx/0x218692358b25492f59c4958b3960f9688ded4239473263809e5024d0d909d5f1).
+  - **Miss (engineered):** a commitment was staged over a bill that was deliberately left unpaid.
+    `settle()` graded it a miss: score 0.008333 → 0.004166 (halved), limit 25.016666 → 25.008332 USDC,
+    sweeps frozen for 24 hours. Sweep
+    [`0x31ba…2427`](https://testnet.arcscan.app/tx/0x31ba5943f9d5e7e300f894674f54b96120a08820bb2a41e12bb51c2dc1722427),
+    settle [`0xe474…b3e2`](https://testnet.arcscan.app/tx/0xe474bc08c6dfaff1267eeecb7580b41035d86b8742a36aee1a0c93910365b3e2).
+    The script and its record are in [`backend/scripts/`](backend/scripts/demo-miss.ts).
+- **Self-serve onboarding from a real MetaMask:** a new owner created a vault, added a payee and registered a
+  bill, and the agent paid it
   ([`0x4df9…da0b`](https://testnet.arcscan.app/tx/0x4df93f2b6e5c24c37997bdaf2edfcd353f9b75802a3e0b13bc2b9fbb78a8da0b)).
-  - It was **late**: the bill was due 4 minutes after its payee was added, inside the 1-hour payee delay. The
-    Onboard page now refuses due dates like that. That vault (`0xB656…3C68`) is a test vault.
-- **The policy layer at work:** it has clamped or rejected 18 model-proposed actions before they reached the
-  chain (live count in `/api/stats`).
+- **The policy layer at work:** 27 model-proposed actions clamped or rejected before reaching the chain
+  (as of 18 Oct), catching the model when it was wrong. Live count in `/api/stats`.
+- **Every decision is replayable:** hashed before any money moves, with the hash emitted on-chain alongside
+  the action and re-verified in the browser on the Replay page.
 
 ### Public numbers
 
-- `/api/stats` counts only active, non-test vaults: **1 business, 2 vaults**, both owned by the builder.
-  **There is no independent business yet.** The landing page's *Live businesses* table labels every
-  builder-owned business.
-- **Test vaults** (excluded from every number): `0x82a9…2692` and `0x4a08…F2b5` (short-parameter demo
-  vaults), `0xAd91…0a5f` and `0xB656…3C68` (created while testing self-serve onboarding).
+`/api/stats` reports real (non-test) vaults only: bills paid by the agent, USDC paid, distinct payees,
+commitments, hits and misses, and policy interventions. Test vaults (`0x82a9…2692`, `0x4a08…F2b5`,
+`0xAd91…0a5f`, `0xB656…3C68`, `0xdeab…5764`) are excluded.
 
 ### Components
 
 | Piece | Status |
 |---|---|
 | Vault: pay / sweep / redeem / settle | ✅ live on Arc testnet, verified on Arcscan; 38 Foundry tests |
-| Score → autonomous limit | ✅ enforced entirely in the contract |
+| Score → autonomous limit | ✅ enforced entirely in the contract; hit and miss both settled on-chain |
 | Agent loop (snapshot → decide → policy → execute) | ✅ every 30 min and on events; 12/12 policy tests |
 | Payments through a Circle SCA wallet | ✅ verified end to end (Gas Station-sponsored, ERC-4337) |
 | Decision hash + replay | ✅ re-hashed in the viewer's browser and checked against the stored, recomputed and on-chain hashes |
 | Permissionless settle from the UI | ✅ Trust page: countdown, then a Settle button for any connected wallet |
 | Live reasoning stream | ✅ SSE at `/api/vaults/:id/live` |
-| LLM | ✅ automatic fallback chain of 8 free models, each tested on a real decision; the record names the model that answered |
-| Invoice OCR | ✅ vision extraction and exact payee matching, verified live once ([`0x4d61…0462`](https://testnet.arcscan.app/tx/0x4d614e69748dfcf6d41578506af8f857230a2189ce41373004e7f9b43a360462)); the no-match path is code-reviewed but not live-tested |
-| Frontend | ✅ landing, pitch deck, docs and 7 console pages on live data, with MetaMask |
+| LLM | ✅ automatic fallback chain of 8 free models; the record names the model that answered |
+| Invoice OCR | ✅ vision extraction and exact payee matching, verified live ([`0x4d61…0462`](https://testnet.arcscan.app/tx/0x4d614e69748dfcf6d41578506af8f857230a2189ce41373004e7f9b43a360462)) |
+| Loophole audit | ✅ all 22 attack scenarios closed in the contract or policy layer |
+| Frontend | ✅ landing, pitch deck, docs and 7 console pages on live data, with MetaMask; responsive on mobile |
 | Hosting | ✅ backend on Render, frontend on Vercel |
-| Recurring bills | 🟨 contract and settler wired; no API route or UI yet |
-| Reserve yield (USYC) | ⬜ stubbed: internal bucket only, no yield |
 
 ---
 

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "kind": "engineered-miss-demo",
+  "vault": "0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5",
+  "note": "Engineered test on a labeled test vault, not an agent decision: the agent's wallet sweeps reserve covering the bill below, and the bill is deliberately left unpaid so settle() grades a miss.",
+  "obligationId": 5,
+  "billUsdc": "0.30",
+  "sweepUsdc": "0.40",
+  "billDueAt": "2026-10-17T13:57:09.000Z",
+  "horizonSec": 598,
+  "graceSec": 60,
+  "createdAt": "2026-10-17T13:49:11.051Z",
+  "canonical": "{\"billDueAt\":\"2026-10-17T13:57:09.000Z\",\"billUsdc\":\"0.30\",\"createdAt\":\"2026-10-17T13:49:11.051Z\",\"graceSec\":60,\"horizonSec\":598,\"kind\":\"engineered-miss-demo\",\"note\":\"Engineered test on a labeled test vault, not an agent decision: the agent's wallet sweeps reserve covering the bill below, and the bill is deliberately left unpaid so settle() grades a miss.\",\"obligationId\":5,\"sweepUsdc\":\"0.40\",\"vault\":\"0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5\",\"version\":1}",
+  "decisionHash": "0x65ec1525b6fbfbb45bf6273dd38665e8003340dc8ba42da62164bfd4b61d95dc",
+  "commitmentId": 3,
+  "T": "2026-10-17T13:59:13.000Z",
+  "txs": {
+    "sweep": "0x31ba5943f9d5e7e300f894674f54b96120a08820bb2a41e12bb51c2dc1722427",
+    "settle": "0xe474bc08c6dfaff1267eeecb7580b41035d86b8742a36aee1a0c93910365b3e2"
+  },
+  "after": {
+    "score": "4166",
+    "cooldownUntil": "2026-10-18T14:00:33.000Z"
+  }
+}
