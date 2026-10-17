@@ -8,6 +8,7 @@ import { Orbit } from "@/components/orbit";
 
 const REAL_HIT_TX = "0x218692358b25492f59c4958b3960f9688ded4239473263809e5024d0d909d5f1";
 const REAL_HIT_VAULT = "0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5";
+const MISS_TX = "0xe474bc08c6dfaff1267eeecb7580b41035d86b8742a36aee1a0c93910365b3e2";
 
 export default function LandingPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -204,29 +205,55 @@ export default function LandingPage() {
       {/* proof */}
       <section id="proof" className="max-w-[1280px] mx-auto px-4 sm:px-8 py-12 sm:py-16 border-b border-border">
         <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2">[ THE MECHANISM, PROVEN ]</div>
-        <h2 className="font-macro uppercase text-2xl tracking-tight mb-6">One real settled hit</h2>
-        <div className="border border-border p-6 max-w-2xl">
-          <p className="text-xs text-ink-dim leading-relaxed mb-4">
-            On a labeled test vault (short parameters, used to demo the loop quickly — not an organic business
-            outcome), the agent committed 1 USDC to reserve against a bill, paid it on time, and the contract
-            settled the commitment as a hit.
-          </p>
-          <div className="font-data text-xs space-y-1.5">
-            <div>
-              score: <span className="text-ink-dim">0</span> → <span className="text-good">0.008333</span>
-            </div>
-            <div>
-              limit: <span className="text-ink-dim">25.00 USDC</span> → <span className="text-good">25.016666 USDC</span>
-            </div>
-            <div>
-              settle tx: <HashLink hash={REAL_HIT_TX} kind="tx" />
-            </div>
-            <div>
-              vault: <HashLink hash={REAL_HIT_VAULT} kind="address" /> <span className="text-ink-dim">(TEST)</span>
+        <h2 className="font-macro uppercase text-2xl tracking-tight mb-2">Both ways, on-chain</h2>
+        <p className="text-xs text-ink-dim leading-relaxed mb-6 max-w-2xl">
+          On one labeled test vault (short parameters, not an organic business outcome), the contract has graded a
+          hit and a miss. The limit stepped up, then down.
+        </p>
+        <div className="hairline-grid grid grid-cols-1 md:grid-cols-2 border border-border max-w-4xl">
+          <div className="bg-bg p-5 sm:p-6">
+            <div className="text-[10px] uppercase tracking-widest text-good mb-3">[ HIT ]</div>
+            <p className="text-xs text-ink-dim leading-relaxed mb-4">
+              The agent committed 1 USDC to reserve against a bill, paid it on time, and the contract settled the
+              commitment as a hit.
+            </p>
+            <div className="font-data text-xs space-y-1.5">
+              <div>
+                score: <span className="text-ink-dim">0</span> → <span className="text-good">0.008333</span>
+              </div>
+              <div>
+                limit: <span className="text-ink-dim">25.00</span> → <span className="text-good">25.016666 USDC</span>
+              </div>
+              <div>
+                settle tx: <HashLink hash={REAL_HIT_TX} kind="tx" />
+              </div>
             </div>
           </div>
-          <Link href={`/console/trust?vault=${REAL_HIT_VAULT}`} className="inline-block mt-5 text-xs font-data text-good hover:underline">
-            → see it on the trust ledger
+          <div className="bg-bg p-5 sm:p-6">
+            <div className="text-[10px] uppercase tracking-widest text-accent mb-3">[ MISS · ENGINEERED ]</div>
+            <p className="text-xs text-ink-dim leading-relaxed mb-4">
+              Staged deliberately to prove the other half: the agent&apos;s wallet committed reserve over a bill that
+              nobody then paid. The contract halved the score and froze sweeps for 24 hours.
+            </p>
+            <div className="font-data text-xs space-y-1.5">
+              <div>
+                score: <span className="text-ink-dim">0.008333</span> → <span className="text-accent">0.004166</span>
+              </div>
+              <div>
+                limit: <span className="text-ink-dim">25.016666</span> → <span className="text-accent">25.008332 USDC</span>
+              </div>
+              <div>
+                settle tx: <HashLink hash={MISS_TX} kind="tx" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-data">
+          <span className="text-ink-dim">
+            vault: <HashLink hash={REAL_HIT_VAULT} kind="address" /> (TEST)
+          </span>
+          <Link href={`/console/trust?vault=${REAL_HIT_VAULT}`} className="text-good hover:underline">
+            → see both on the trust ledger
           </Link>
         </div>
       </section>
