@@ -43,6 +43,13 @@ async function ensureArcTestnet() {
   }
 }
 
+/** Wallet errors are often plain objects ({code, message}), not Error instances. */
+export function walletErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  const o = e as { message?: string; shortMessage?: string; data?: { message?: string } } | null;
+  return o?.shortMessage ?? o?.data?.message ?? o?.message ?? String(e);
+}
+
 /** Drops this site's account permission in wallets that support it (MetaMask does), so the next
  *  connect asks again. Wallets without the method just ignore it; the app forgets the account anyway. */
 export async function revokeWallet(): Promise<void> {
@@ -62,6 +69,7 @@ export function onAccountsChanged(cb: (account: string | null) => void): () => v
 
 /** Sends a prepared {to, data} as the connected owner account. Returns the tx hash. */
 export async function sendPreparedTx(to: string, data: string, from: string): Promise<string> {
+  await ensureArcTestnet(); // the wallet may have been switched to another network since connecting
   const hash = (await provider().request({
     method: "eth_sendTransaction",
     params: [{ to, data, from }],

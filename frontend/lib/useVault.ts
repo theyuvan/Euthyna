@@ -15,7 +15,8 @@ function urlVault(): string | null {
 
 /** The vault currently shown across /console, in priority order:
  *  1. an explicit `?vault=` link (e.g. the landing page's proof link to the test vault's chart);
- *  2. the connected wallet's own vault (first active, non-test one it owns);
+ *  2. the connected wallet's own vault (first active, non-test one it owns); a wallet that owns only
+ *     test vaults stays on the default, since test vaults are demo fixtures, not a business;
  *  3. the last-picked vault in localStorage, then DEFAULT_VAULT — so a visitor who hasn't
  *     connected anything still sees real data. */
 export function useVault(): [string, (v: string) => void] {
@@ -28,8 +29,8 @@ export function useVault(): [string, (v: string) => void] {
     if (!address) return;
     getVaults(address)
       .then((vaults) => {
-        const pick = vaults.find((v) => v.active && !v.is_test) ?? vaults[0];
-        if (pick) setVaultState(pick.address);
+        const pick = vaults.find((v) => v.active && !v.is_test);
+        setVaultState(pick ? pick.address : DEFAULT_VAULT);
       })
       .catch(() => {});
   }, [address]);

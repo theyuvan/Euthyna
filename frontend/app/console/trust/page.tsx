@@ -6,7 +6,7 @@ import { getCommitments, getTrust, getVaults, nudgeIndexer, ApiError, type Commi
 import { useVault } from "@/lib/useVault";
 import { useWallet } from "@/lib/WalletContext";
 import { publicClient } from "@/lib/chain";
-import { sendPreparedTx } from "@/lib/wallet";
+import { sendPreparedTx, walletErrorMessage } from "@/lib/wallet";
 import { vaultAbi } from "@/lib/vault-abi";
 import { StatTile, StatRow, Panel, EmptyState, ErrorState, RpcUnavailableState, StatusPill, HashText, HashLink } from "@/components/primitives";
 
@@ -112,7 +112,7 @@ export default function TrustPage() {
       setTimeout(() => setReloadKey((k) => k + 1), 4000);
       setTimeout(() => setReloadKey((k) => k + 1), 15000);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = walletErrorMessage(e);
       setSettleError(
         /AlreadySettled/.test(msg)
           ? "Already settled: someone graded it first. Refreshing…"
