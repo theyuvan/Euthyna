@@ -67,8 +67,17 @@ const requireOwner = (action: string) => (req: Request, res: Response, next: Nex
 export function createServer() {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
+  // CORS_ORIGIN is "*" or a comma-separated list. Local dev origins are always allowed: writes are
+  // authorized by wallet signatures or the admin token, never cookies, so CORS guards no credentials.
+  const allowed = config.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
+  const isLocal = (o: string) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
   app.use((req, res, next) => {
-    res.setHeader("access-control-allow-origin", config.CORS_ORIGIN);
+    const origin = req.headers.origin;
+    if (allowed.includes("*")) res.setHeader("access-control-allow-origin", "*");
+    else {
+      res.setHeader("vary", "Origin");
+      res.setHeader("access-control-allow-origin", origin && (allowed.includes(origin) || isLocal(origin)) ? origin : allowed[0] ?? "");
+    }
     res.setHeader("access-control-allow-headers", "content-type, authorization, x-euthyna-auth");
     res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
     if (req.method === "OPTIONS") return res.sendStatus(204);

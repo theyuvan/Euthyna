@@ -122,8 +122,10 @@ npm start                       # API on :8787 + agent / settler / indexer loops
 
 `render.yaml` at the repo root is a Render Blueprint for this service (`rootDir: backend`, health check
 `/health`). Set the secrets marked `sync: false` in Render's dashboard from your `.env`. Set `CORS_ORIGIN`
-to the deployed frontend's origin; it defaults to `*`, which is safe here because owner writes are
-authorized by wallet signatures, not cookies.
+to the deployed frontend's origin (or a comma-separated list). It defaults to `*`, which is safe here
+because owner writes are authorized by wallet signatures, not cookies; for the same reason
+`http://localhost` and `http://127.0.0.1` origins are always allowed, so a local frontend can use the
+hosted API.
 
 ## API
 
