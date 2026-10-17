@@ -58,17 +58,17 @@ export default function PitchPage() {
     <div className="min-h-screen flex flex-col">
       {/* top bar, matching the landing page */}
       <div className="border-b border-border shrink-0">
-        <div className="px-8 py-5 flex items-center justify-between max-w-[1280px] mx-auto">
+        <div className="px-4 sm:px-8 py-5 flex items-center justify-between max-w-[1280px] mx-auto">
           <Link href="/" className="font-macro text-base tracking-tight">
             EUTHYNA
           </Link>
-          <nav className="flex items-center gap-6 text-xs font-data text-ink-dim">
+          <nav className="flex items-center gap-4 sm:gap-6 text-xs font-data text-ink-dim">
             <span className="text-ink">PITCH</span>
             <Link href="/docs" className="hover:text-ink">
               DOCS
             </Link>
-            <Link href="/console" className="border border-good text-good px-3 py-1.5 hover:bg-good hover:text-bg">
-              LAUNCH CONSOLE
+            <Link href="/console" className="border border-good text-good px-2.5 sm:px-3 py-1.5 hover:bg-good hover:text-bg whitespace-nowrap">
+              <span className="hidden sm:inline">LAUNCH </span>CONSOLE
             </Link>
           </nav>
         </div>
@@ -76,7 +76,7 @@ export default function PitchPage() {
 
       <div ref={deck} className="pitch-deck flex-1 flex flex-col bg-bg">
       <div className="flex-1 flex items-center">
-        <div key={i} className="slide-in w-full max-w-[1180px] mx-auto px-8 py-8">
+        <div key={i} className="slide-in w-full max-w-[1180px] mx-auto px-4 sm:px-8 py-6 sm:py-8">
           {i === 0 && <TitleSlide />}
           {i === 1 && <NumbersSlide />}
           {i === 2 && <ProblemSlide />}
@@ -88,7 +88,7 @@ export default function PitchPage() {
 
       {/* controls */}
       <div className="shrink-0 border-t border-border">
-        <div className="max-w-[1180px] mx-auto px-8 py-4 flex items-center gap-4">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <button
             onClick={() => go(i - 1)}
             disabled={i === 0}
@@ -153,7 +153,7 @@ function TitleSlide() {
   return (
     <div className="text-center">
       <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-8 font-data">[ Tameion hackathon · Canteen × Circle · on Arc ]</div>
-      <div className="flex items-center justify-center gap-6 md:gap-8">
+      <div className="flex items-center justify-center gap-4 md:gap-8">
         <EuthynaMark className="w-16 h-16 md:w-28 md:h-28 shrink-0" />
         <h1 className="font-macro uppercase leading-none tracking-tight" style={{ fontSize: "clamp(3rem, 11vw, 9.5rem)" }}>
           Euthyna
@@ -234,8 +234,8 @@ function NumbersSlide() {
         <>
           <div className="hairline-grid grid grid-cols-2 lg:grid-cols-4 border border-border">
             {cards.map(([v, l, d]) => (
-              <div key={l} className="bg-bg p-6">
-                <div className="font-macro text-5xl tracking-tight text-good">{v}</div>
+              <div key={l} className="bg-bg p-4 sm:p-6 min-w-0">
+                <div className="font-macro text-3xl sm:text-5xl tracking-tight text-good break-all">{v}</div>
                 <div className="text-sm text-ink mt-3">{l}</div>
                 <div className="text-xs text-ink-dim mt-2 leading-relaxed">{d}</div>
               </div>
@@ -395,6 +395,7 @@ function DifferentSlide() {
           </tbody>
         </table>
       </div>
+      <p className="md:hidden mt-2 text-[10px] font-data text-ink-dim uppercase tracking-widest">← swipe the table →</p>
       <div className="hairline-grid grid grid-cols-1 md:grid-cols-3 border border-border mt-6">
         {[
           ["Earned, not configured", "The only thing that raises the limit is a promise kept, checked by the contract."],

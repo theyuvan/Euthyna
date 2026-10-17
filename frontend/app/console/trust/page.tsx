@@ -192,17 +192,46 @@ export default function TrustPage() {
     return { startAt, points, x, y, d, minY, maxY, decimals };
   }, [trust]);
 
+  // Status, countdown or Settle button for one commitment: shared by the table and the phone cards.
+  const statusCell = (c: Commitment) => (
+    !c.settled ? (
+      <div className="flex items-center gap-2">
+        <StatusPill kind="pending">OPEN</StatusPill>
+        {grace !== null && now > 0 &&
+          (() => {
+            const left = Math.ceil((new Date(c.t).getTime() + grace * 1000 - now) / 1000);
+            return left > 0 ? (
+              <span className="text-ink-dim" title="settle() opens at T + grace">settle in {countdown(left)}</span>
+            ) : (
+              <button
+                onClick={() => settle(c.chain_id)}
+                disabled={settling !== null}
+                title="Anyone can call settle(): the contract grades the commitment from its own records"
+                className="border border-good text-good px-2 py-0.5 uppercase hover:bg-good hover:text-bg disabled:opacity-50"
+              >
+                {settling === c.chain_id ? "settling…" : wallet.address ? "settle" : "connect to settle"}
+              </button>
+            );
+          })()}
+      </div>
+    ) : c.hit ? (
+      <StatusPill kind="hit">HIT</StatusPill>
+    ) : (
+      <StatusPill kind="miss">MISS</StatusPill>
+    )
+  );
+
   return (
     <div>
-      <div className="px-8 pt-8 pb-6 border-b border-border">
-        <h1 className="font-macro text-3xl tracking-tight uppercase">Trust</h1>
+      <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-border">
+        <h1 className="font-macro text-2xl sm:text-3xl tracking-tight uppercase">Trust</h1>
         <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">
           The autonomous limit over time. It only moves at a settlement — a hit steps it up, a miss halves the
           score. Nothing else can raise this number.
         </p>
       </div>
 
-      <div className="p-8 space-y-8">
+      <div className="p-4 sm:p-8 space-y-8">
         {error && <ErrorState message={error} />}
         {rpcDown && <RpcUnavailableState onRetry={() => setReloadKey((k) => k + 1)} />}
         {isTest && (
@@ -280,7 +309,29 @@ export default function TrustPage() {
           {!commitments || commitments.length === 0 ? (
             <EmptyState>No commitments opened yet.</EmptyState>
           ) : (
-            <table className="w-full text-xs font-data">
+            <>
+            <div className="sm:hidden divide-y divide-border">
+              {commitments.map((c) => (
+                <div key={c.chain_id} className="p-4 text-xs font-data space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-ink">#{c.chain_id} · {c.amount} USDC</span>
+                    <span className="text-ink-dim">credit {c.credit ?? "—"}</span>
+                  </div>
+                  <div>{statusCell(c)}</div>
+                  <dl className="grid grid-cols-[7rem_1fr] gap-y-1.5 text-ink-dim">
+                    <dt>Opened</dt>
+                    <dd>{new Date(c.opened_at).toLocaleString()}</dd>
+                    <dt>T</dt>
+                    <dd>{new Date(c.t).toLocaleString()}</dd>
+                    <dt>Capital·days</dt>
+                    <dd>{c.capital_usdc_days}</dd>
+                    <dt>Decision</dt>
+                    <dd>{c.decision_hash ? <HashText hash={c.decision_hash} /> : "—"}</dd>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <table className="hidden sm:table w-full text-xs font-data">
               <thead>
                 <tr className="text-ink-dim text-left">
                   <th className="px-4 py-2 font-normal">ID</th>
@@ -302,31 +353,7 @@ export default function TrustPage() {
                     <td className="px-4 py-2.5 text-ink-dim">{new Date(c.t).toLocaleString()}</td>
                     <td className="px-4 py-2.5">{c.capital_usdc_days}</td>
                     <td className="px-4 py-2.5">
-                      {!c.settled ? (
-                        <div className="flex items-center gap-2">
-                          <StatusPill kind="pending">OPEN</StatusPill>
-                          {grace !== null && now > 0 &&
-                            (() => {
-                              const left = Math.ceil((new Date(c.t).getTime() + grace * 1000 - now) / 1000);
-                              return left > 0 ? (
-                                <span className="text-ink-dim" title="settle() opens at T + grace">settle in {countdown(left)}</span>
-                              ) : (
-                                <button
-                                  onClick={() => settle(c.chain_id)}
-                                  disabled={settling !== null}
-                                  title="Anyone can call settle(): the contract grades the commitment from its own records"
-                                  className="border border-good text-good px-2 py-0.5 uppercase hover:bg-good hover:text-bg disabled:opacity-50"
-                                >
-                                  {settling === c.chain_id ? "settling…" : wallet.address ? "settle" : "connect to settle"}
-                                </button>
-                              );
-                            })()}
-                        </div>
-                      ) : c.hit ? (
-                        <StatusPill kind="hit">HIT</StatusPill>
-                      ) : (
-                        <StatusPill kind="miss">MISS</StatusPill>
-                      )}
+                      {statusCell(c)}
                     </td>
                     <td className="px-4 py-2.5">{c.credit ?? "—"}</td>
                     <td className="px-4 py-2.5">{c.decision_hash ? <HashText hash={c.decision_hash} /> : "—"}</td>
@@ -334,6 +361,7 @@ export default function TrustPage() {
                 ))}
               </tbody>
             </table>
+            </>
           )}
         </Panel>
       </div>

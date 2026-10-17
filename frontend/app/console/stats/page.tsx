@@ -14,15 +14,15 @@ export default function StatsPage() {
 
   return (
     <div>
-      <div className="px-8 pt-8 pb-6 border-b border-border">
-        <h1 className="font-macro text-3xl tracking-tight uppercase">Public Stats</h1>
+      <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-border">
+        <h1 className="font-macro text-2xl sm:text-3xl tracking-tight uppercase">Public Stats</h1>
         <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">
           Totals across every real, non-test vault. No login needed — this is the same honesty bar the whole
           product is built on: these numbers are exactly what&apos;s on Arcscan, nothing padded.
         </p>
       </div>
 
-      <div className="p-8 space-y-8">
+      <div className="p-4 sm:p-8 space-y-8">
         {error && <ErrorState message={error} />}
         {!stats ? (
           <EmptyState>Loading…</EmptyState>

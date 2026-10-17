@@ -31,14 +31,14 @@ export default function DecisionsPage() {
 
   return (
     <div>
-      <div className="px-8 pt-8 pb-6 border-b border-border">
-        <h1 className="font-macro text-3xl tracking-tight uppercase">Decisions</h1>
+      <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-border">
+        <h1 className="font-macro text-2xl sm:text-3xl tracking-tight uppercase">Decisions</h1>
         <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">
           Every agent run, in order. Each one is hashed before anything is sent — click a row to replay and verify it.
         </p>
       </div>
 
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         {error && <ErrorState message={error} />}
         <Panel title={`Decision feed · ${(decisions ?? []).length}`}>
           {!decisions ? (
@@ -53,13 +53,13 @@ export default function DecisionsPage() {
                   href={`/console/replay?id=${d.id}`}
                   className="block px-4 py-3 hover:bg-surface transition-colors"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
                       <StatusPill kind={statusKind(d.status)}>{d.status}</StatusPill>
                       <span className="text-[10px] text-ink-dim font-data uppercase">{d.trigger}</span>
-                      <span className="text-[10px] text-ink-dim font-data">{d.model_served ?? d.model}</span>
+                      <span className="text-[10px] text-ink-dim font-data break-all">{d.model_served ?? d.model}</span>
                     </div>
-                    <span className="text-[10px] text-ink-dim font-data">{new Date(d.created_at).toLocaleString()}</span>
+                    <span className="text-[10px] text-ink-dim font-data whitespace-nowrap">{new Date(d.created_at).toLocaleString()}</span>
                   </div>
                   <div className="mt-2 space-y-1">
                     {d.llm?.actions?.length ? (

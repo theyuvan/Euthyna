@@ -5,8 +5,8 @@ import { explorerAddress, explorerTx, short } from "@/lib/api";
 
 export function PageHeader({ title, sub }: { title: string; sub?: string }) {
   return (
-    <header className="px-8 pt-8 pb-6 border-b border-border">
-      <h1 className="font-macro text-3xl tracking-tight uppercase">{title}</h1>
+    <header className="px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-border">
+      <h1 className="font-macro text-2xl sm:text-3xl tracking-tight uppercase">{title}</h1>
       {sub && <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">{sub}</p>}
     </header>
   );
@@ -14,11 +14,11 @@ export function PageHeader({ title, sub }: { title: string; sub?: string }) {
 
 export function StatTile({ label, value, unit, dim }: { label: string; value: string; unit?: string; dim?: boolean }) {
   return (
-    <div className="bg-surface p-5">
+    <div className="bg-surface p-4 sm:p-5 min-w-0">
       <div className="text-[10px] uppercase tracking-wide text-ink-dim mb-2">{label}</div>
-      <div className={`font-data text-2xl ${dim ? "text-ink-dim" : "text-ink"}`}>
-        {value}
-        {unit && <span className="text-xs text-ink-dim ml-1">{unit}</span>}
+      <div className={`font-data text-xl sm:text-2xl ${dim ? "text-ink-dim" : "text-ink"}`}>
+        <span className="break-all">{value}</span>
+        {unit && <span className="text-xs text-ink-dim ml-1 whitespace-nowrap">{unit}</span>}
       </div>
     </div>
   );
@@ -39,7 +39,7 @@ const PILL_STYLE: Record<PillKind, string> = {
 };
 export function StatusPill({ kind, children }: { kind: PillKind; children: React.ReactNode }) {
   return (
-    <span className={`inline-block border px-2 py-0.5 text-[10px] uppercase tracking-wide font-data ${PILL_STYLE[kind]}`}>
+    <span className={`inline-block border px-2 py-0.5 text-[10px] uppercase tracking-wide font-data whitespace-nowrap ${PILL_STYLE[kind]}`}>
       [ {children} ]
     </span>
   );
@@ -85,7 +85,7 @@ export function Panel({ title, children, right }: { title: string; children: Rea
         <span className="text-[10px] uppercase tracking-wide text-ink-dim">{title}</span>
         {right}
       </div>
-      <div>{children}</div>
+      <div className="overflow-x-auto">{children}</div>
     </div>
   );
 }

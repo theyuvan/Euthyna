@@ -29,8 +29,8 @@ function ReplayInner() {
 
   return (
     <div>
-      <div className="px-8 pt-8 pb-6 border-b border-border">
-        <h1 className="font-macro text-3xl tracking-tight uppercase">Replay</h1>
+      <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-border">
+        <h1 className="font-macro text-2xl sm:text-3xl tracking-tight uppercase">Replay</h1>
         <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">
           The stored decision record, re-hashed in this browser and compared against what&apos;s on-chain. A green
           match means the record hasn&apos;t been edited since the agent wrote it — a red mismatch means it has.
@@ -54,7 +54,7 @@ function ReplayInner() {
         </form>
       </div>
 
-      <div className="p-8 space-y-8">
+      <div className="p-4 sm:p-8 space-y-8">
         {error && <ErrorState message={error} />}
         {!id && !error && <EmptyState>Pick a decision from the Decisions page, or paste an id above.</EmptyState>}
 

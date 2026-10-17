@@ -63,9 +63,9 @@ export default function EscalationsPage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between px-8 pt-8 pb-6 border-b border-border">
+      <div className="flex flex-wrap items-start justify-between gap-4 px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-border">
         <div>
-          <h1 className="font-macro text-3xl tracking-tight uppercase">Escalations</h1>
+          <h1 className="font-macro text-2xl sm:text-3xl tracking-tight uppercase">Escalations</h1>
           <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">
             Bills the agent couldn&apos;t pay on its own — above the autonomous limit, or the daily cap. Only the
             owner can approve or cancel one; this signs with your own wallet, the backend never holds your key.
@@ -73,7 +73,7 @@ export default function EscalationsPage() {
         </div>
       </div>
 
-      <div className="p-8 space-y-4">
+      <div className="p-4 sm:p-8 space-y-4">
         {error && <ErrorState message={error} />}
         {lastTx && (
           <div className="border border-good text-good text-xs font-data px-4 py-2">

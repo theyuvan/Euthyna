@@ -59,15 +59,15 @@ export default function TreasuryPage() {
 
   return (
     <div>
-      <div className="px-8 pt-8 pb-6 border-b border-border">
-        <h1 className="font-macro text-3xl tracking-tight uppercase">Treasury</h1>
+      <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-border">
+        <h1 className="font-macro text-2xl sm:text-3xl tracking-tight uppercase">Treasury</h1>
         <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">
           Liquid vs. reserve, bills due in the next 14 days, and expected inflows. Every figure below is a live
           read from the real vault contract or its database mirror.
         </p>
       </div>
 
-      <div className="p-8 space-y-8">
+      <div className="p-4 sm:p-8 space-y-8">
         {error && <ErrorState message={error} />}
         {rpcDown && <RpcUnavailableState onRetry={() => setReloadKey((k) => k + 1)} />}
 

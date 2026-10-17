@@ -25,23 +25,23 @@ export default function DocsPage() {
     <div className="min-h-full">
       {/* top bar, matching the landing page */}
       <div className="border-b border-border">
-        <div className="px-8 py-5 flex items-center justify-between max-w-[1280px] mx-auto">
+        <div className="px-4 sm:px-8 py-5 flex items-center justify-between max-w-[1280px] mx-auto">
           <Link href="/" className="font-macro text-base tracking-tight">
             EUTHYNA
           </Link>
-          <nav className="flex items-center gap-6 text-xs font-data text-ink-dim">
+          <nav className="flex items-center gap-4 sm:gap-6 text-xs font-data text-ink-dim">
             <Link href="/pitch" className="hover:text-ink">
               PITCH
             </Link>
             <span className="text-ink">DOCS</span>
-            <Link href="/console" className="border border-good text-good px-3 py-1.5 hover:bg-good hover:text-bg">
-              LAUNCH CONSOLE
+            <Link href="/console" className="border border-good text-good px-2.5 sm:px-3 py-1.5 hover:bg-good hover:text-bg whitespace-nowrap">
+              <span className="hidden sm:inline">LAUNCH </span>CONSOLE
             </Link>
           </nav>
         </div>
       </div>
 
-      <div className="max-w-[1280px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-12">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-12">
         {/* table of contents */}
         <aside className="hidden lg:block">
           <div className="sticky top-0 pt-14">
@@ -61,7 +61,7 @@ export default function DocsPage() {
           </div>
         </aside>
 
-        <main className="pt-14 pb-24 max-w-3xl">
+        <main className="pt-10 sm:pt-14 pb-20 sm:pb-24 max-w-3xl min-w-0">
           <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-6">[ Documentation ]</div>
           <h1 className="font-macro uppercase leading-[0.9] tracking-tight" style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.75rem)" }}>
             How Euthyna works
@@ -220,7 +220,7 @@ export default function DocsPage() {
         </main>
       </div>
 
-      <footer className="border-t border-border px-8 py-6 max-w-[1280px] mx-auto text-[10px] text-ink-dim font-data flex items-center justify-between">
+      <footer className="border-t border-border px-4 sm:px-8 py-6 max-w-[1280px] mx-auto text-[10px] text-ink-dim font-data flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between">
         <span>Arc testnet · chain 5042002</span>
         <span>testnet.arcscan.app</span>
       </footer>
@@ -230,7 +230,7 @@ export default function DocsPage() {
 
 function Section({ id, n, title, children }: { id: string; n: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-8 border-t border-border mt-14 pt-10">
+    <section id={id} className="scroll-mt-8 border-t border-border mt-10 sm:mt-14 pt-8 sm:pt-10">
       <div className="font-data text-xs text-ink-dim mb-2">{n}</div>
       <h2 className="font-macro uppercase text-2xl tracking-tight mb-6">{title}</h2>
       <div className="space-y-4">{children}</div>
@@ -262,7 +262,7 @@ function Steps({ items }: { items: [string, string][] }) {
   return (
     <ol className="hairline-grid grid grid-cols-1 border border-border">
       {items.map(([t, d], i) => (
-        <li key={t} className="bg-bg p-5 grid grid-cols-[2.5rem_1fr]">
+        <li key={t} className="bg-bg p-4 sm:p-5 grid grid-cols-[2rem_1fr] sm:grid-cols-[2.5rem_1fr]">
           <span className="font-data text-xs text-good">{String(i + 1).padStart(2, "0")}</span>
           <div>
             <div className="font-macro uppercase text-sm mb-1.5">{t}</div>

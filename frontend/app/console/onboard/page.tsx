@@ -132,9 +132,9 @@ export default function OnboardPage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between px-8 pt-8 pb-6 border-b border-border">
+      <div className="flex flex-wrap items-start justify-between gap-4 px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-border">
         <div>
-          <h1 className="font-macro text-3xl tracking-tight uppercase">Onboard</h1>
+          <h1 className="font-macro text-2xl sm:text-3xl tracking-tight uppercase">Onboard</h1>
           <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">
             A real vault, a real agent wallet, one real payee, one real bill — under 5 minutes. Your wallet signs
             every step; nobody else ever holds your key. Note: a new payee is locked for the vault&apos;s activation
@@ -144,7 +144,7 @@ export default function OnboardPage() {
         </div>
       </div>
 
-      <div className="p-8 max-w-xl space-y-6">
+      <div className="p-4 sm:p-8 max-w-xl space-y-6">
         {error && <div className="border border-accent text-accent text-xs font-data px-4 py-2">[ ERROR ] {error}</div>}
 
         <div className={`border px-4 py-3 text-xs font-data ${wallet.address ? "border-good" : "border-border"}`}>

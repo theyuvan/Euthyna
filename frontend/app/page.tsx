@@ -43,23 +43,23 @@ export default function LandingPage() {
   return (
     <div className="min-h-full">
       {/* top bar */}
-      <div className="border-b border-border px-8 py-5 flex items-center justify-between max-w-[1280px] mx-auto">
+      <div className="border-b border-border px-4 sm:px-8 py-5 flex items-center justify-between max-w-[1280px] mx-auto">
         <div className="font-macro text-base tracking-tight">EUTHYNA</div>
-        <nav className="flex items-center gap-6 text-xs font-data text-ink-dim">
+        <nav className="flex items-center gap-4 sm:gap-6 text-xs font-data text-ink-dim">
           <Link href="/pitch" className="hover:text-ink">
             PITCH
           </Link>
           <Link href="/docs" className="hover:text-ink">
             DOCS
           </Link>
-          <Link href="/console" className="border border-good text-good px-3 py-1.5 hover:bg-good hover:text-bg">
-            LAUNCH CONSOLE
+          <Link href="/console" className="border border-good text-good px-2.5 sm:px-3 py-1.5 hover:bg-good hover:text-bg whitespace-nowrap">
+            <span className="hidden sm:inline">LAUNCH </span>CONSOLE
           </Link>
         </nav>
       </div>
 
       {/* hero */}
-      <section className="max-w-[1280px] mx-auto px-8 pt-16 pb-16 border-b border-border grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-center">
+      <section className="max-w-[1280px] mx-auto px-4 sm:px-8 pt-10 sm:pt-16 pb-12 sm:pb-16 border-b border-border grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-center overflow-hidden">
         <div>
         <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-6">[ AI TREASURY · ARC TESTNET ]</div>
         <h1
@@ -75,7 +75,7 @@ export default function LandingPage() {
           paying a bill on time, the outcome is settled on-chain — a hit raises its limit, a miss halves it. No
           self-reported metrics. No trust required, only verification.
         </p>
-        <div className="flex items-center gap-4 mt-10">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-8 sm:mt-10">
           <Link href="/console" className="border border-good text-good px-5 py-3 text-xs font-data uppercase hover:bg-good hover:text-bg">
             Launch operator console
           </Link>
@@ -84,18 +84,20 @@ export default function LandingPage() {
           </Link>
         </div>
         </div>
-        <Orbit />
+        <div className="px-6 sm:px-0">
+          <Orbit />
+        </div>
       </section>
 
       {/* stats */}
-      <section className="max-w-[1280px] mx-auto px-8 py-16 border-b border-border">
+      <section className="max-w-[1280px] mx-auto px-4 sm:px-8 py-12 sm:py-16 border-b border-border">
         <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-6">[ LIVE, REAL NUMBERS — NO TEST VAULTS ]</div>
         {!stats ? (
           <LoadingLine offline={offline} />
         ) : (
           <StatRow>
             <StatTile label="Bills paid autonomously" value={stats.bills_paid_autonomously} />
-            <StatTile label="USDC paid" value={stats.usdc_paid} unit="USDC" />
+            <StatTile label="USDC paid" value={Number(stats.usdc_paid).toFixed(2)} unit="USDC" />
             <StatTile label="Distinct payees" value={stats.distinct_payees_paid} />
             <StatTile label="Businesses live" value={stats.businesses} />
           </StatRow>
@@ -103,7 +105,7 @@ export default function LandingPage() {
       </section>
 
       {/* businesses */}
-      <section id="businesses" className="max-w-[1280px] mx-auto px-8 py-16 border-b border-border">
+      <section id="businesses" className="max-w-[1280px] mx-auto px-4 sm:px-8 py-12 sm:py-16 border-b border-border">
         <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2">[ WHO IS BEHIND THE NUMBERS ]</div>
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <h2 className="font-macro uppercase text-2xl tracking-tight">Live businesses</h2>
@@ -116,7 +118,38 @@ export default function LandingPage() {
         {!businesses ? (
           <LoadingLine offline={offline} />
         ) : (
-          <div className="border border-border overflow-x-auto">
+          <>
+          {/* phones: one card per business */}
+          <div className="sm:hidden hairline-grid grid grid-cols-1 border border-border">
+            {businesses.map((b) => (
+              <div key={b.owner} className="bg-bg p-4 text-xs font-data">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-ink text-sm">{b.business ?? "Unnamed"}</span>
+                  {b.builder && <span className="border border-border px-1.5 py-0.5 text-[10px] text-ink-dim uppercase">builder</span>}
+                </div>
+                <dl className="grid grid-cols-2 gap-y-2 gap-x-4">
+                  <dt className="text-ink-dim">Owner</dt>
+                  <dd className="text-right"><HashLink hash={b.owner} kind="address" /></dd>
+                  <dt className="text-ink-dim">Bills paid by agent</dt>
+                  <dd className="text-right">{b.bills_paid_autonomously}</dd>
+                  <dt className="text-ink-dim">USDC</dt>
+                  <dd className="text-right">{Number(b.usdc_paid).toFixed(2)}</dd>
+                  <dt className="text-ink-dim">Commitments</dt>
+                  <dd className="text-right">{b.commitments_opened}</dd>
+                  <dt className="text-ink-dim">Hit / miss</dt>
+                  <dd className="text-right"><span className="text-good">{b.hits}</span> / <span className={b.misses ? "text-accent" : ""}>{b.misses}</span></dd>
+                </dl>
+                <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
+                  {b.vaults.map((v) => (
+                    <Link key={v} href={`/console?vault=${v}`} className="text-ink-dim hover:text-good underline decoration-border underline-offset-2">
+                      vault {v.slice(0, 6)}…{v.slice(-4)}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden sm:block border border-border overflow-x-auto">
             <table className="w-full text-xs font-data">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wide text-ink-dim border-b border-border text-left">
@@ -155,6 +188,7 @@ export default function LandingPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <Link href="/console/onboard" className="border border-good text-good px-5 py-3 text-xs font-data uppercase hover:bg-good hover:text-bg">
@@ -168,7 +202,7 @@ export default function LandingPage() {
       </section>
 
       {/* proof */}
-      <section id="proof" className="max-w-[1280px] mx-auto px-8 py-16 border-b border-border">
+      <section id="proof" className="max-w-[1280px] mx-auto px-4 sm:px-8 py-12 sm:py-16 border-b border-border">
         <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2">[ THE MECHANISM, PROVEN ]</div>
         <h2 className="font-macro uppercase text-2xl tracking-tight mb-6">One real settled hit</h2>
         <div className="border border-border p-6 max-w-2xl">
@@ -198,7 +232,7 @@ export default function LandingPage() {
       </section>
 
       {/* how it works */}
-      <section id="how" className="max-w-[1280px] mx-auto px-8 py-16">
+      <section id="how" className="max-w-[1280px] mx-auto px-4 sm:px-8 py-12 sm:py-16">
         <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-6">[ HOW IT WORKS ]</div>
         <div className="hairline-grid grid grid-cols-1 md:grid-cols-3 border border-border">
           {[
@@ -227,7 +261,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-border px-8 py-6 max-w-[1280px] mx-auto text-[10px] text-ink-dim font-data flex items-center justify-between">
+      <footer className="border-t border-border px-4 sm:px-8 py-6 max-w-[1280px] mx-auto text-[10px] text-ink-dim font-data flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between">
         <span>Arc testnet · chain 5042002</span>
         <span>testnet.arcscan.app</span>
       </footer>
