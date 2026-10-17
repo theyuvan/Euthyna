@@ -65,6 +65,8 @@ export interface Stats {
   blocked_or_clamped_by_policy: string;
 }
 export const getStats = () => get<Stats>("/api/stats");
+/** Asks the backend to index the chain now (public, no-op beyond that), so a new tx shows up fast. */
+export const nudgeIndexer = () => fetch(`${BASE}/webhooks/circle`, { method: "POST" }).catch(() => {});
 
 /** One row per business (distinct owner wallet), active non-test vaults only. */
 export interface Business {

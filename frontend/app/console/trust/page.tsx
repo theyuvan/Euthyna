@@ -1,9 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getCommitments, getTrust, getVaults, ApiError, type Commitment, type Trust } from "@/lib/api";
+import { encodeFunctionData, formatUnits, getAddress, parseEventLogs } from "viem";
+import { getCommitments, getTrust, getVaults, nudgeIndexer, ApiError, type Commitment, type Trust } from "@/lib/api";
 import { useVault } from "@/lib/useVault";
-import { StatTile, StatRow, Panel, EmptyState, ErrorState, RpcUnavailableState, StatusPill, HashText } from "@/components/primitives";
+import { useWallet } from "@/lib/WalletContext";
+import { publicClient } from "@/lib/chain";
+import { sendPreparedTx } from "@/lib/wallet";
+import { vaultAbi } from "@/lib/vault-abi";
+import { StatTile, StatRow, Panel, EmptyState, ErrorState, RpcUnavailableState, StatusPill, HashText, HashLink } from "@/components/primitives";
+
+type SettleResult = { cid: number; tx: string; hit: boolean; credit: string; score: string; limit: string };
+
+/** seconds -> "1h 02m 05s" / "2m 05s" / "5s" */
+function countdown(sec: number) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return h ? `${h}h ${p(m)}m ${p(s)}s` : m ? `${m}m ${p(s)}s` : `${s}s`;
+}
 
 const W = 900;
 const H = 280;
@@ -18,6 +34,96 @@ export default function TrustPage() {
   const [hover, setHover] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [isTest, setIsTest] = useState(false);
+  const wallet = useWallet();
+  const [grace, setGrace] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [settling, setSettling] = useState<number | null>(null);
+  const [settleError, setSettleError] = useState<string | null>(null);
+  const [settled, setSettled] = useState<SettleResult | null>(null);
+
+  // settle() opens at T + grace; read grace from the vault and tick a clock for the countdown.
+  useEffect(() => {
+    let live = true;
+    setGrace(null);
+    publicClient
+      .readContract({ address: getAddress(vault), abi: vaultAbi, functionName: "grace" })
+      .then((g) => live && setGrace(Number(g)))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [vault]);
+
+  const hasOpen = Boolean(commitments?.some((c) => !c.settled));
+  useEffect(() => {
+    if (!hasOpen) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [hasOpen]);
+
+  // Once an open commitment is settleable, poll quietly: if anyone else (e.g. the backend settler)
+  // grades it first, the page flips to the result on its own instead of waiting for a reload.
+  const matured = Boolean(
+    grace !== null && commitments?.some((c) => !c.settled && new Date(c.t).getTime() + grace * 1000 <= now),
+  );
+  useEffect(() => {
+    if (!matured) return;
+    const id = setInterval(() => {
+      getCommitments(vault)
+        .then((cs) => {
+          if (cs.some((c) => c.settled && commitments?.find((o) => o.chain_id === c.chain_id && !o.settled))) {
+            setReloadKey((k) => k + 1);
+          }
+        })
+        .catch(() => {});
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [matured, vault, commitments]);
+
+  async function settle(cid: number) {
+    setSettleError(null);
+    const from = wallet.address;
+    if (!from) {
+      await wallet.connect();
+      return; // the button stays; click again once connected
+    }
+    setSettling(cid);
+    try {
+      // Simulate first so a revert comes back as the contract's named error, not a wallet gas failure.
+      await publicClient.simulateContract({ address: getAddress(vault), abi: vaultAbi, functionName: "settle", args: [cid], account: getAddress(from) });
+      const data = encodeFunctionData({ abi: vaultAbi, functionName: "settle", args: [cid] });
+      const tx = await sendPreparedTx(vault, data, from);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx as `0x${string}` });
+      if (receipt.status !== "success") throw new Error("settle transaction reverted");
+      const [ev] = parseEventLogs({ abi: vaultAbi, logs: receipt.logs, eventName: "Settled" });
+      if (ev) {
+        setSettled({
+          cid,
+          tx,
+          hit: ev.args.hit,
+          credit: formatUnits(ev.args.credit, 6),
+          score: formatUnits(ev.args.newScore, 6),
+          limit: formatUnits(ev.args.newLimit, 6),
+        });
+      }
+      // Ask the backend to index it now, then refresh the chart and table once it has.
+      await nudgeIndexer();
+      setTimeout(() => setReloadKey((k) => k + 1), 4000);
+      setTimeout(() => setReloadKey((k) => k + 1), 15000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSettleError(
+        /AlreadySettled/.test(msg)
+          ? "Already settled: someone graded it first. Refreshing…"
+          : /NotMatured/.test(msg)
+            ? "Not matured yet: settle() opens at T + grace."
+            : msg.split("\n")[0],
+      );
+      setReloadKey((k) => k + 1);
+    } finally {
+      setSettling(null);
+    }
+  }
 
   // Each effect ignores responses from a superseded vault: the vault switches from the default to
   // the URL/wallet one right after mount, and a slow stale response must not overwrite the new one.
@@ -118,6 +224,14 @@ export default function TrustPage() {
           </StatRow>
         )}
 
+        {settled && (
+          <div className={`border ${settled.hit ? "border-good text-good" : "border-accent text-accent"} text-xs font-data px-4 py-3`}>
+            [ {settled.hit ? "HIT" : "MISS"} ] Commitment #{settled.cid} graded by the contract. credit {settled.credit} · score → {settled.score} ·
+            limit → {settled.limit} USDC · tx <HashLink hash={settled.tx} kind="tx" />
+          </div>
+        )}
+        {settleError && <div className="border border-accent text-accent text-xs font-data px-4 py-2">[ SETTLE ] {settleError}</div>}
+
         <Panel title="Limit over time">
           {!chart ? (
             <EmptyState>Loading…</EmptyState>
@@ -187,7 +301,31 @@ export default function TrustPage() {
                     <td className="px-4 py-2.5 text-ink-dim">{new Date(c.t).toLocaleString()}</td>
                     <td className="px-4 py-2.5">{c.capital_usdc_days}</td>
                     <td className="px-4 py-2.5">
-                      {!c.settled ? <StatusPill kind="pending">OPEN</StatusPill> : c.hit ? <StatusPill kind="hit">HIT</StatusPill> : <StatusPill kind="miss">MISS</StatusPill>}
+                      {!c.settled ? (
+                        <div className="flex items-center gap-2">
+                          <StatusPill kind="pending">OPEN</StatusPill>
+                          {grace !== null &&
+                            (() => {
+                              const left = Math.ceil((new Date(c.t).getTime() + grace * 1000 - now) / 1000);
+                              return left > 0 ? (
+                                <span className="text-ink-dim" title="settle() opens at T + grace">settle in {countdown(left)}</span>
+                              ) : (
+                                <button
+                                  onClick={() => settle(c.chain_id)}
+                                  disabled={settling !== null}
+                                  title="Anyone can call settle(): the contract grades the commitment from its own records"
+                                  className="border border-good text-good px-2 py-0.5 uppercase hover:bg-good hover:text-bg disabled:opacity-50"
+                                >
+                                  {settling === c.chain_id ? "settling…" : wallet.address ? "settle" : "connect to settle"}
+                                </button>
+                              );
+                            })()}
+                        </div>
+                      ) : c.hit ? (
+                        <StatusPill kind="hit">HIT</StatusPill>
+                      ) : (
+                        <StatusPill kind="miss">MISS</StatusPill>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">{c.credit ?? "—"}</td>
                     <td className="px-4 py-2.5">{c.decision_hash ? <HashText hash={c.decision_hash} /> : "—"}</td>
