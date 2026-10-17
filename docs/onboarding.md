@@ -72,5 +72,5 @@ bill, plus a little extra. Either:
 - **Is this real money?** No. It's Arc testnet, and test USDC has no value. The bills, the decisions and the
   on-chain records are real.
 
-Feedback is very welcome. Open an issue on [GitHub](https://github.com/theyuvan/tameion/issues) or reply
+Feedback is very welcome. Open an issue on [GitHub](https://github.com/theyuvan/Euthyna/issues) or reply
 to whoever sent you this guide.

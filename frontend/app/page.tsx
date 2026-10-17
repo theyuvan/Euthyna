@@ -8,7 +8,7 @@ import { Orbit } from "@/components/orbit";
 
 const REAL_HIT_TX = "0x218692358b25492f59c4958b3960f9688ded4239473263809e5024d0d909d5f1";
 const REAL_HIT_VAULT = "0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5";
-const ONBOARDING_GUIDE = "https://github.com/theyuvan/tameion/blob/main/docs/onboarding.md";
+const ONBOARDING_GUIDE = "https://github.com/theyuvan/Euthyna/blob/main/docs/onboarding.md";
 
 export default function LandingPage() {
   const [stats, setStats] = useState<Stats | null>(null);
