@@ -6,15 +6,25 @@ import { useWallet } from "./WalletContext";
 
 const KEY = "euthyna.selectedVault";
 
-/** The vault currently shown across /console. Driven by the connected wallet once one's
- *  connected (looks up the vault(s) that wallet owns and picks the first active, non-test one);
- *  falls back to the last-picked vault in localStorage, then DEFAULT_VAULT, when no wallet is
- *  connected — so the console still shows real data to a visitor who hasn't connected anything. */
+/** `?vault=0x…` in the URL, if valid. Read inside effects only (client-side), so pages don't need
+ *  a Suspense boundary the way useSearchParams would. */
+function urlVault(): string | null {
+  const v = new URLSearchParams(window.location.search).get("vault");
+  return v && /^0x[0-9a-fA-F]{40}$/.test(v) ? v : null;
+}
+
+/** The vault currently shown across /console, in priority order:
+ *  1. an explicit `?vault=` link (e.g. the landing page's proof link to the test vault's chart);
+ *  2. the connected wallet's own vault (first active, non-test one it owns);
+ *  3. the last-picked vault in localStorage, then DEFAULT_VAULT — so a visitor who hasn't
+ *     connected anything still sees real data. */
 export function useVault(): [string, (v: string) => void] {
   const { address } = useWallet();
   const [vault, setVaultState] = useState(DEFAULT_VAULT);
 
   useEffect(() => {
+    const fromUrl = urlVault();
+    if (fromUrl) return setVaultState(fromUrl);
     if (!address) return;
     getVaults(address)
       .then((vaults) => {
@@ -25,7 +35,7 @@ export function useVault(): [string, (v: string) => void] {
   }, [address]);
 
   useEffect(() => {
-    if (address) return; // wallet-driven selection takes precedence once connected
+    if (address || urlVault()) return;
     try {
       const saved = localStorage.getItem(KEY);
       if (saved) setVaultState(saved);

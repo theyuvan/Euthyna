@@ -102,7 +102,7 @@ export default function LandingPage() {
               vault: <HashLink hash={REAL_HIT_VAULT} kind="address" /> <span className="text-ink-dim">(TEST)</span>
             </div>
           </div>
-          <Link href="/console/trust" className="inline-block mt-5 text-xs font-data text-good hover:underline">
+          <Link href={`/console/trust?vault=${REAL_HIT_VAULT}`} className="inline-block mt-5 text-xs font-data text-good hover:underline">
             → see it on the trust ledger
           </Link>
         </div>

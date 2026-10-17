@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getCommitments, getTrust, ApiError, type Commitment, type Trust } from "@/lib/api";
+import { getCommitments, getTrust, getVaults, ApiError, type Commitment, type Trust } from "@/lib/api";
 import { useVault } from "@/lib/useVault";
 import { StatTile, StatRow, Panel, EmptyState, ErrorState, RpcUnavailableState, StatusPill, HashText } from "@/components/primitives";
 
@@ -17,8 +17,22 @@ export default function TrustPage() {
   const [rpcDown, setRpcDown] = useState(false);
   const [hover, setHover] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [isTest, setIsTest] = useState(false);
+
+  // Each effect ignores responses from a superseded vault: the vault switches from the default to
+  // the URL/wallet one right after mount, and a slow stale response must not overwrite the new one.
+  useEffect(() => {
+    let live = true;
+    getVaults()
+      .then((vs) => live && setIsTest(Boolean(vs.find((v) => v.address.toLowerCase() === vault.toLowerCase())?.is_test)))
+      .catch(() => live && setIsTest(false));
+    return () => {
+      live = false;
+    };
+  }, [vault]);
 
   useEffect(() => {
+    let live = true;
     setTrust(null);
     setError(null);
     setRpcDown(false);
@@ -26,11 +40,14 @@ export default function TrustPage() {
     // commitments is DB-backed; trust needs a live baseLimit() read — fetched independently so
     // an RPC outage doesn't also blank the commitments table.
     getTrust(vault)
-      .then(setTrust)
-      .catch((e) => (e instanceof ApiError && e.code === "RPC_UNAVAILABLE" ? setRpcDown(true) : setError(e.message)));
+      .then((t) => live && setTrust(t))
+      .catch((e) => live && (e instanceof ApiError && e.code === "RPC_UNAVAILABLE" ? setRpcDown(true) : setError(e.message)));
     getCommitments(vault)
-      .then(setCommitments)
-      .catch((e) => setError(e.message));
+      .then((c) => live && setCommitments(c))
+      .catch((e) => live && setError(e.message));
+    return () => {
+      live = false;
+    };
   }, [vault, reloadKey]);
 
   const chart = useMemo(() => {
@@ -44,8 +61,15 @@ export default function TrustPage() {
     const allY = [Number(trust.start.limit), ...points.map((p) => p.limit)];
     const minX = Math.min(...allX);
     const maxX = Math.max(...allX, minX + 1);
-    const minY = Math.min(...allY) * 0.98;
-    const maxY = Math.max(...allY) * 1.02;
+    // Fit the axis to the data: credits are tiny (a hit moved 25 → 25.0167), so fixed ±2% padding
+    // drew every step as a flat line. Labels carry enough decimals to show the true magnitude.
+    const lo = Math.min(...allY);
+    const hi = Math.max(...allY);
+    const span = hi - lo;
+    const pad = span > 0 ? span * 0.6 : Math.max(lo * 0.001, 0.01);
+    const minY = lo - pad;
+    const maxY = hi + pad;
+    const decimals = maxY - minY < 0.1 ? 4 : 2;
     const x = (t: number) => PAD.left + ((t - minX) / (maxX - minX || 1)) * (W - PAD.left - PAD.right);
     const y = (v: number) => H - PAD.bottom - ((v - minY) / (maxY - minY || 1)) * (H - PAD.top - PAD.bottom);
 
@@ -58,7 +82,7 @@ export default function TrustPage() {
     }
     d += ` L ${x(maxX)} ${y(prevLimit)}`;
 
-    return { startAt, points, x, y, d, minY, maxY };
+    return { startAt, points, x, y, d, minY, maxY, decimals };
   }, [trust]);
 
   return (
@@ -74,6 +98,12 @@ export default function TrustPage() {
       <div className="p-8 space-y-8">
         {error && <ErrorState message={error} />}
         {rpcDown && <RpcUnavailableState onRetry={() => setReloadKey((k) => k + 1)} />}
+        {isTest && (
+          <div className="border border-border text-ink-dim text-xs font-data px-4 py-3">
+            <span className="text-ink">[ TEST VAULT ]</span> Short parameters, used to demo the loop quickly — not an
+            organic business outcome, and excluded from the public numbers.
+          </div>
+        )}
 
         {trust && (
           <StatRow>
@@ -103,7 +133,7 @@ export default function TrustPage() {
                     <g key={f}>
                       <line x1={PAD.left} x2={W - PAD.right} y1={chart.y(v)} y2={chart.y(v)} stroke="var(--border)" strokeWidth={1} />
                       <text x={PAD.left - 8} y={chart.y(v)} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="var(--ink-dim)" fontFamily="var(--font-data)">
-                        {v.toFixed(2)}
+                        {v.toFixed(chart.decimals)}
                       </text>
                     </g>
                   );
