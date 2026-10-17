@@ -209,7 +209,7 @@ sequenceDiagram
     Scheduler->>Agent: every 30 min, or on a new bill / inflow
     Agent->>Vault: snapshot (balances, bills, payees, limits)
     Agent->>Agent: precompute: payable bills, safe sweep amount, horizon
-    Agent->>LLM: decide (JSON schema; walks the chain on failure)
+    Agent->>LLM: decide (JSON schema, falls back to the next model on failure)
     LLM-->>Agent: proposed actions + reasoning
     Agent->>Policy: check every action against code-computed numbers
     Policy-->>Agent: allowed / clamped / rejected
