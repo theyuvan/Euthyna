@@ -12,6 +12,8 @@ services:
         sync: false
       - key: ARC_RPC_URL
         value: https://rpc.testnet.arc.io
+      - key: ARC_RPC_FALLBACK_URLS
+        value: https://rpc.blockdaemon.testnet.arc.io
       - key: FACTORY_ADDRESS
         sync: false
       - key: FACTORY_START_BLOCK
@@ -24,13 +26,17 @@ services:
         sync: false
       - key: CIRCLE_WALLET_SET_ID
         sync: false
+      # Gemini's free tier hit its daily quota; OpenRouter with this free model is what runs today.
       - key: LLM_PROVIDER
-        value: gemini
-      - key: GEMINI_API_KEY
+        value: openrouter
+      - key: OPENROUTER_API_KEY
         sync: false
       - key: LLM_MODEL
-        value: gemini-3.5-flash-lite
+        value: liquid/lfm-2.5-2.6b:free
       - key: ADMIN_TOKEN
+        sync: false
+      # the deployed dashboard's origin, e.g. https://euthyna.vercel.app (defaults to *)
+      - key: CORS_ORIGIN
         sync: false
       - key: PORT
         value: 8787
