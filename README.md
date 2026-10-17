@@ -15,8 +15,10 @@ Built for the Tameion Agents Hackathon (Canteen × Circle, on Arc).
 | Path | What |
 | --- | --- |
 | `contracts/` | `EuthynaVault` and `EuthynaFactory` (Foundry), with tests for every item in the loophole audit |
-| `worker/` | Agent loop, settler, indexer and HTTP API (Node + TypeScript, viem, Circle SDK, Claude) |
+| `worker/` | Agent loop, settler, indexer and HTTP API (Node + TypeScript, viem, Circle SDK, pluggable LLM) |
+| `dashboard/` | Landing page and operator console (Next.js 16): Treasury, Trust, Decisions, Replay, Escalations, Onboard, Public Stats |
 | `db/schema.sql` | Postgres schema (Supabase) |
+| `DESIGN.md` | The dashboard's design system |
 
 ## How it works
 
@@ -25,7 +27,7 @@ owner (MetaMask) ──owner calls──▶ EuthynaVault ◀──agent calls─
                                      │  holds USDC, payees, bills,                       │
                                      │  commitments, score, limits                        ├─ snapshot (chain + DB)
                                      ▼                                                    ├─ precompute (code)
-                         allowlisted payees only                                          ├─ decide (Claude, JSON schema)
+                         allowlisted payees only                                          ├─ decide (LLM, JSON schema)
                                                                                           ├─ policy pre-check (code)
                     settle(): permissionless, grades from contract state                  ├─ keccak256(canonical record)
                                                                                           └─ execute with decisionHash
@@ -96,29 +98,63 @@ All 22 attacks from the spec are closed. Tests are in `contracts/test/EuthynaVau
 
 ## Status (honest)
 
+Every claim below can be checked on [Arcscan](https://testnet.arcscan.app) or against the live API.
+
+### What's proven on-chain
+
+- **The mechanism works end to end, once, on a test vault.** The agent swept 1 USDC into reserve against a
+  bill, paid the bill on time, and `settle()` graded the commitment a **hit**. Score went 0 → 0.008333 and
+  the autonomous limit went 25.00 → 25.016666 USDC. Settle tx
+  [`0x2186…d5f1`](https://testnet.arcscan.app/tx/0x218692358b25492f59c4958b3960f9688ded4239473263809e5024d0d909d5f1)
+  on vault `0x4a08…F2b5`.
+  - That vault is a **test vault** with short parameters (2-minute minimum horizon), so the loop can be shown
+    in hours instead of days. It is labeled as test everywhere and excluded from the public numbers.
+- **Autonomous payments on real (non-test) vaults:** 6 bills, 39.10 USDC, to 5 distinct payees, all sent by
+  the agent's Circle wallet. The first was
+  [`0x791f…0876`](https://testnet.arcscan.app/tx/0x791f71d1c955a8ca57c0b6c60692ae85dee09bf6f3cef135c96486283ba30876).
+  - One of the six, `DOMAIN-TEST-2` (0.10 USDC), was paid **about 33 hours late**: Arc retired its old RPC
+    domain while it was due, and the agent couldn't reach the chain. No commitment covered it, so the score
+    is unaffected, but it was a late payment.
+- **No commitment has settled on a real vault yet.** The only settled commitment is the test-vault hit
+  above.
+
+### Public numbers (`/api/stats`)
+
+- They count only active, non-test vaults: **1 business, 2 vaults**, both owned by the builder. There is no
+  second, independent business yet.
+- **Test vaults** (excluded from every number):
+  - `0x82a9…2692` and `0x4a08…F2b5`: short-parameter vaults for demonstrating the loop.
+  - `0xAd91…0a5f` and `0xB656…3C68`: created while testing the self-serve onboarding flow, the second one
+    from the builder's own MetaMask wallet. They're marked test so they don't count as extra businesses.
+
+### Components
+
 | Piece | Status |
 | --- | --- |
-| Vault: pay / sweep / redeem / settle | ✅ live on Arc testnet, 37/37 Foundry tests pass, verified on Arcscan |
+| Vault: pay / sweep / redeem / settle | ✅ live on Arc testnet, verified on Arcscan; 38 Foundry tests pass (plus 1 fork test that runs only with `ARC_RPC_URL` set) |
 | Score → autonomous limit formula | ✅ live, enforced entirely in the contract |
-| Agent worker loop (snapshot → decide → policy → execute) | ✅ live, runs every 30 min and on demand |
-| Real payment through a real Circle SCA wallet | ✅ verified end-to-end on Arc testnet (Gas Station-sponsored, ERC-4337) |
-| Decision hash + replay (`/api/decisions/:id`) | ✅ live; tamper detection confirmed (edited record flips the check red) |
-| Live reasoning stream (`/api/vaults/:id/live`, `/live.html`) | ✅ live: snapshot → deciding → proposed → policy_check → sending → confirmed, over SSE |
-| LLM provider | ✅ pluggable — Anthropic, xAI (Grok), or Gemini via `LLM_PROVIDER`; currently running Gemini |
-| Recurring bills (`addRecurring` / `materializeRecurring`) | ✅ contract + settler wired; no API route yet to add one (call the contract directly for now) |
-| Reserve yield (USYC) | ⬜ stubbed — internal bucket only, no yield; Circle allowlist ticket not filed |
-| Invoice OCR | ⬜ not built — bills are entered as owner-registered obligations by hand |
-| Dashboard (Treasury / Trust chart / Escalations pages) | ⬜ not built — this repo is backend + API only right now; `/live.html` is the one page that exists |
-| Real business data in the production vault | ⬜ not yet — the production vault (`0x0767f136…`) is live and empty, waiting for real payees/bills |
+| Agent worker loop (snapshot → decide → policy → execute) | ✅ live, runs every 30 min and on demand; 12/12 policy tests pass |
+| Payments through a real Circle SCA wallet | ✅ verified end to end on Arc testnet (Gas Station-sponsored, ERC-4337) |
+| Decision hash + replay | ✅ live; the Replay page re-hashes the record **in the viewer's browser** and checks it against the stored, server-recomputed and on-chain hashes |
+| Live reasoning stream (`/api/vaults/:id/live`, `/live.html`) | ✅ live over SSE |
+| LLM provider | ✅ pluggable: Anthropic, xAI, Gemini or OpenRouter. Currently running OpenRouter's free `liquid/lfm-2.5-2.6b`, because Gemini's free-tier daily quota ran out. Policy never trusts a number from the model, so a small model can't move money wrongly. |
+| Invoice OCR | ✅ vision extraction, exact payee matching and on-chain registration, verified live once ([`0x4d61…0462`](https://testnet.arcscan.app/tx/0x4d614e69748dfcf6d41578506af8f857230a2189ce41373004e7f9b43a360462)). The no-match path (owner alert, nothing on-chain) is code-reviewed but not live-tested. |
+| Dashboard | ✅ landing page and 7 console pages on live data, with MetaMask wallet connect. Self-serve onboarding (vault → payee → bill) verified twice with real transactions, once from a real MetaMask. |
+| RPC resilience | ✅ moved to `rpc.testnet.arc.io` after the old domain was retired, with a Blockdaemon fallback and Multicall3-batched reads; outages surface as a clean 503 the dashboard auto-retries |
+| Recurring bills (`addRecurring` / `materializeRecurring`) | 🟨 contract and settler wired; no API route or UI to add one yet |
+| Reserve yield (USYC) | ⬜ stubbed: internal bucket only, no yield; Circle allowlist ticket not filed |
+| Hosted deployment | ⬜ not yet: `render.yaml` (worker) is ready; the dashboard deploys to any Next.js host |
 
 ## Running it
 
 Prerequisites: [Foundry](https://getfoundry.sh), Node 20+, a Supabase project, a Circle developer account
-(testnet API key), and a key for one LLM provider — Anthropic, [xAI](https://console.x.ai) (Grok), or
-[Google AI Studio](https://aistudio.google.com/apikey) (Gemini, free tier). Set `LLM_PROVIDER` and the
-matching `*_API_KEY` in `.env`; `LLM_MODEL` defaults to a Claude model, so pick one for your provider
-(e.g. `gemini-3.5-flash-lite` — avoid `gemini-3.8-flash` for this loop, it's a reasoning model that can
-spend its whole token budget on hidden thinking and return empty content).
+(testnet API key), and a key for one LLM provider: Anthropic, [xAI](https://console.x.ai) (Grok),
+[Google AI Studio](https://aistudio.google.com/apikey) (Gemini), or [OpenRouter](https://openrouter.ai).
+Set `LLM_PROVIDER` and the matching `*_API_KEY` in `.env`. `LLM_MODEL` defaults to a Claude model, so pick
+one for your provider.
+- On OpenRouter's free tier, `liquid/lfm-2.5-2.6b:free` works.
+- Avoid reasoning models (e.g. `gemini-3.8-flash`, NVIDIA's free reasoning models) for this loop. They
+  can spend their whole token budget on hidden thinking and return empty content.
 
 ```bash
 git submodule update --init --recursive
@@ -139,7 +175,16 @@ npm run setup:circle            # first run prints an entity secret to add to .e
 npm run create-wallet           # agent SCA wallet; its address is the vault's agent
 npm run create-vault -- 0xAgentAddress     # or let the owner do it from the dashboard
 npm start                       # API on :8787 + agent / settler / indexer loops
+
+# dashboard
+cd ../dashboard
+npm install
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8787 npm run dev    # http://localhost:3000
 ```
+
+Owner actions in the dashboard are signed by the owner's own wallet (MetaMask). For automated browser runs,
+`npx tsx scripts/demo-wallet-bridge.ts` (in `worker/`) serves a stand-in wallet on `127.0.0.1:8788` that
+signs with `OWNER_PRIVATE_KEY`; it only accepts the local dashboard origin.
 
 Useful one-shots: `npm run agent:once -- 0xVault`, `npm run settle:once`, `npm run index:once`,
 `npm run smoke` (live testnet transfers, no LLM or DB), `npm test` (policy unit tests),
@@ -161,6 +206,12 @@ Reads are public. Writes need `Authorization: Bearer $ADMIN_TOKEN` or an owner s
 | GET | `/api/vaults/:vault/live` | SSE: every stage of the agent loop as it happens (also at `/live.html?vault=…`) |
 | GET | `/api/decisions/:id` | Replay: stored record, recomputed hash, on-chain events |
 | POST | `/api/vaults/:vault/inflows` | `add-inflow`: expected inflow with confidence 0.5/0.8/0.95 |
+| POST | `/api/vaults/:vault/inflows/:id/received` | `inflow-received`: mark an expected inflow as arrived |
+| POST | `/api/vaults/:vault/onboard/payee` | `onboard-payee`: unsigned `addPayee` calldata for the owner's wallet |
+| POST | `/api/vaults/:vault/onboard/obligation` | `onboard-obligation`: unsigned `registerObligation` calldata |
+| POST | `/api/vaults/:vault/onboard/obligations/:id/cancel` | `onboard-cancel`: unsigned `cancelObligation` calldata |
+| POST | `/api/vaults/:vault/onboard/obligations/:id/approve-escalation` | `onboard-approve-escalation`: unsigned `approveEscalation` calldata |
+| POST | `/api/vaults/:vault/invoices` | `invoice-upload`: invoice image → extracted bill, registered by the agent if the payee matches exactly |
 | POST | `/api/vaults/:vault/run` | `run`: run the agent now |
 | POST | `/api/vaults/:vault/settle` | `settle`: settle matured commitments now |
 | POST | `/api/vaults/:vault/payees/:payee` | `payee-meta`: display name, aliases |
