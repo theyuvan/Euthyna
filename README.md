@@ -314,8 +314,12 @@ Every claim here can be checked on [Arcscan](https://testnet.arcscan.app) or aga
   - One of them, `DOMAIN-TEST-2` (0.10 USDC), was paid **about 33 hours late**: Arc retired its old RPC domain
     while it was due, and the agent couldn't reach the chain. No commitment covered it, so the score is
     unaffected, but it was a late payment.
-- **The first production commitment is open:** on vault `0x0767…a23d` the agent committed 14 USDC of
-  reserve on its own. It becomes settleable at 22:22 IST on 17 Oct.
+- **The first real commitment settled as a hit, on the production vault.** At 15:22 IST on 17 Oct the agent,
+  on its own, paid a 5 USDC bill and swept 14 USDC into reserve for 6 hours (decision `0x2da5…836e`). At
+  22:32 IST `settle()` graded it a **hit**: score 0 → 0.083333, autonomous limit 25.00 → 25.166666 USDC.
+  Settle tx [`0x2051…31b4`](https://testnet.arcscan.app/tx/0x20510e7b5eb69b0cb702d60fdc9978c4dd1f9987fac74a4f2a53bf64f01c31b4).
+  - The backend's automatic settler sent it. `settle()` is permissionless, and the caller can't change the
+    result: the contract grades it from its own records.
 - **Self-serve onboarding, end to end, from a real MetaMask:** a new owner created a vault, added a payee and
   registered a bill; once funded, the agent paid it
   ([`0x4df9…da0b`](https://testnet.arcscan.app/tx/0x4df93f2b6e5c24c37997bdaf2edfcd353f9b75802a3e0b13bc2b9fbb78a8da0b)).
