@@ -36,7 +36,7 @@ export default function TrustPage() {
   const [isTest, setIsTest] = useState(false);
   const wallet = useWallet();
   const [grace, setGrace] = useState<number | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(0); // set after mount: Date.now() can't run during prerender
   const [settling, setSettling] = useState<number | null>(null);
   const [settleError, setSettleError] = useState<string | null>(null);
   const [settled, setSettled] = useState<SettleResult | null>(null);
@@ -57,6 +57,7 @@ export default function TrustPage() {
   const hasOpen = Boolean(commitments?.some((c) => !c.settled));
   useEffect(() => {
     if (!hasOpen) return;
+    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [hasOpen]);
@@ -64,7 +65,7 @@ export default function TrustPage() {
   // Once an open commitment is settleable, poll quietly: if anyone else (e.g. the backend settler)
   // grades it first, the page flips to the result on its own instead of waiting for a reload.
   const matured = Boolean(
-    grace !== null && commitments?.some((c) => !c.settled && new Date(c.t).getTime() + grace * 1000 <= now),
+    grace !== null && now > 0 && commitments?.some((c) => !c.settled && new Date(c.t).getTime() + grace * 1000 <= now),
   );
   useEffect(() => {
     if (!matured) return;
@@ -304,7 +305,7 @@ export default function TrustPage() {
                       {!c.settled ? (
                         <div className="flex items-center gap-2">
                           <StatusPill kind="pending">OPEN</StatusPill>
-                          {grace !== null &&
+                          {grace !== null && now > 0 &&
                             (() => {
                               const left = Math.ceil((new Date(c.t).getTime() + grace * 1000 - now) / 1000);
                               return left > 0 ? (
