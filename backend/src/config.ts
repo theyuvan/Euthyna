@@ -60,6 +60,12 @@ const schema = z.object({
   PORT: z.coerce.number().default(8787),
   ADMIN_TOKEN: z.string().optional(),
   CORS_ORIGIN: z.string().default("*"),
+  // The builder's own owner wallets. /api/businesses labels their vaults "builder" so the public
+  // numbers can tell independent businesses apart from the team's own.
+  BUILDER_ADDRESSES: z
+    .string()
+    .default("0x7a869bcf4075292b4628d3d7ae6df95910b61c9a,0xbf74f5f0cf561f04ee745edb56b27948d6e040cf")
+    .transform((s) => s.split(",").map((a) => a.trim().toLowerCase()).filter(Boolean)),
 });
 
 export type Config = z.infer<typeof schema>;

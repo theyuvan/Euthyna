@@ -135,6 +135,7 @@ Reads are public. Writes need `Authorization: Bearer $ADMIN_TOKEN` or an owner s
 | --- | --- | --- |
 | GET | `/health` | Liveness, executor and model |
 | GET | `/api/stats` | Public totals for judges (active, non-test vaults only) |
+| GET | `/api/businesses` | One row per business (owner wallet): vaults, bills paid by the agent, commitments, hits and misses; builder-owned rows are flagged via `BUILDER_ADDRESSES` |
 | GET | `/api/vaults?owner=0x…` | Vaults |
 | GET | `/api/vaults/:vault` | Live state + open owner alerts |
 | GET | `/api/vaults/:vault/{obligations,payees,commitments,inflows,decisions}` | Mirrors |

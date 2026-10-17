@@ -93,6 +93,7 @@ export function createServer() {
          )
          select
            (select count(distinct owner_address) from live) as businesses,
+           (select count(distinct owner_address) from live where owner_address <> all($1::text[])) as independent_businesses,
            (select count(*) from live) as vaults,
            (select count(*) from paid p join live v on v.id = p.vault_id where lower(p.args->>'by') = v.agent_address) as bills_paid_autonomously,
            (select round(coalesce(sum((args->>'amount')::numeric), 0) / 1e6, 6) from paid) as usdc_paid,
@@ -108,8 +109,45 @@ export function createServer() {
               where a.status = 'SIMULATION_FAILED') as blocked_by_contract,
            (select count(*) from decisions d join live v on v.id = d.vault_id,
               jsonb_array_elements(d.policy_result->'log') l where l->>'verdict' in ('rejected', 'clamped', 'converted')) as blocked_or_clamped_by_policy`,
+        [config.BUILDER_ADDRESSES],
       );
       res.json(s);
+    }),
+  );
+
+  // One row per business (distinct owner wallet) across its active, non-test vaults, so anyone can
+  // see who is behind the public numbers. Builder-owned businesses are labeled, not hidden.
+  app.get(
+    "/api/businesses",
+    h(async (_req, res) => {
+      res.json(await q(
+        `with live as (
+           select v.*, b.name as business from vaults v left join businesses b on b.id = v.business_id
+           where v.active and not v.is_test
+         )
+         select l.owner_address as owner,
+           l.owner_address = any($1::text[]) as builder,
+           (array_agg(l.business order by l.created_at) filter (where l.business is not null))[1] as business,
+           min(l.created_at) as joined_at,
+           json_agg(l.address order by l.created_at) as vaults,
+           coalesce(sum(p.bills), 0)::int as bills_paid_autonomously,
+           round(coalesce(sum(p.usdc), 0), 6) as usdc_paid,
+           coalesce(sum(c.opened), 0)::int as commitments_opened,
+           coalesce(sum(c.hits), 0)::int as hits,
+           coalesce(sum(c.misses), 0)::int as misses
+         from live l
+         left join lateral (
+           select count(*) as bills, coalesce(sum((e.args->>'amount')::numeric), 0) / 1e6 as usdc
+           from chain_events e where e.vault_id = l.id and e.name = 'Paid' and lower(e.args->>'by') = l.agent_address
+         ) p on true
+         left join lateral (
+           select count(*) as opened, count(*) filter (where settled and hit) as hits, count(*) filter (where settled and not hit) as misses
+           from commitments where vault_id = l.id
+         ) c on true
+         group by l.owner_address
+         order by joined_at`,
+        [config.BUILDER_ADDRESSES],
+      ));
     }),
   );
 
