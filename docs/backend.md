@@ -26,7 +26,7 @@ owner (MetaMask) ──owner calls──▶ EuthynaVault ◀──agent calls─
 
 | Loop | Interval | What it does |
 | --- | --- | --- |
-| Agent | every 30 min (`AGENT_INTERVAL_MIN`), on events, and on demand | snapshot → decide → policy → execute |
+| Agent | every 30 min (`AGENT_INTERVAL_MIN`), on events, and on demand | snapshot → decide → policy → execute; automatic runs skip test vaults unless `AGENT_INCLUDE_TEST=true` (manual `POST /run` still works) |
 | Settler | every 10 min | settles matured commitments |
 | Indexer | every few seconds | mirrors vault and factory events into Postgres; picks up new vaults automatically |
 

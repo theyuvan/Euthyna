@@ -11,6 +11,9 @@ const queued = new Map<string, { v: VaultRow; reasons: Set<string> }>();
 const running = new Set<string>();
 
 export function requestRun(v: VaultRow, reason: string) {
+  // Test vaults are demo fixtures: automatic triggers skip them so they don't spend LLM quota
+  // (a manual POST /run still works, and indexing and settlement still cover them).
+  if (v.is_test && !config.AGENT_INCLUDE_TEST) return;
   const entry = queued.get(v.id) ?? { v, reasons: new Set<string>() };
   entry.reasons.add(reason);
   queued.set(v.id, entry);

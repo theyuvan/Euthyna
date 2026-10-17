@@ -47,6 +47,8 @@ const schema = z.object({
   LLM_STUB_FILE: z.string().optional(),
 
   AGENT_INTERVAL_MIN: z.coerce.number().default(30),
+  // Automatic agent runs skip is_test vaults unless this is "true".
+  AGENT_INCLUDE_TEST: z.preprocess((v) => v === "true" || v === true, z.boolean()).default(false),
   SETTLER_INTERVAL_MIN: z.coerce.number().default(10),
   INDEXER_INTERVAL_SEC: z.coerce.number().default(60),
   LOG_CHUNK_BLOCKS: z.coerce.bigint().default(5000n),
