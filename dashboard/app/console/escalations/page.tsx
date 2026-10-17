@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getObligations, prepareApproveEscalation, prepareCancelObligation, type Obligation } from "@/lib/api";
 import { sendPreparedTx } from "@/lib/wallet";
 import { useVault } from "@/lib/useVault";
@@ -15,10 +15,15 @@ export default function EscalationsPage() {
   const [busy, setBusy] = useState<number | null>(null);
   const [lastTx, setLastTx] = useState<string | null>(null);
 
+  // only the latest request may update state — a stale response for a superseded vault is dropped
+  const latest = useRef(0);
   const load = () => {
+    const req = ++latest.current;
     setObligations(null);
     setError(null);
-    getObligations(vault).then(setObligations).catch((e) => setError(e.message));
+    getObligations(vault)
+      .then((o) => req === latest.current && setObligations(o))
+      .catch((e) => req === latest.current && setError(e.message));
   };
   useEffect(load, [vault]);
 

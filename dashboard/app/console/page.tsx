@@ -27,20 +27,26 @@ export default function TreasuryPage() {
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
+    // ignore responses from a superseded vault (it switches from the default right after mount)
+    let live = true;
     setNow(Date.now());
     setError(null);
     setRpcDown(false);
     // Vault state needs a live on-chain read; obligations/inflows are DB-backed. Fetched
     // independently so an RPC outage doesn't also blank out the DB-backed tables.
     getVault(vault)
-      .then(setState)
-      .catch((e) => (e instanceof ApiError && e.code === "RPC_UNAVAILABLE" ? setRpcDown(true) : setError(e.message)));
+      .then((s) => live && setState(s))
+      .catch((e) => live && (e instanceof ApiError && e.code === "RPC_UNAVAILABLE" ? setRpcDown(true) : setError(e.message)));
     Promise.all([getObligations(vault), getInflows(vault)])
       .then(([o, i]) => {
+        if (!live) return;
         setObligations(o);
         setInflows(i);
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => live && setError(e.message));
+    return () => {
+      live = false;
+    };
   }, [vault, reloadKey]);
 
   const twoWeeks = (now ?? 0) + 14 * 24 * 3600 * 1000;

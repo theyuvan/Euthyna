@@ -18,9 +18,15 @@ export default function DecisionsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let live = true; // ignore responses from a superseded vault
     setDecisions(null);
     setError(null);
-    getDecisions(vault).then(setDecisions).catch((e) => setError(e.message));
+    getDecisions(vault)
+      .then((d) => live && setDecisions(d))
+      .catch((e) => live && setError(e.message));
+    return () => {
+      live = false;
+    };
   }, [vault]);
 
   return (
