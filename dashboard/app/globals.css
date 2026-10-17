@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+/* Dark-only, single substrate — see DESIGN.md. No light mode, this is an operator console. */
+:root {
+  --bg: #0a0a0a;
+  --surface: #121212;
+  --ink: #eaeaea;
+  --ink-dim: #8a8a86;
+  --border: #2a2a28;
+  --accent: #e61919;
+  --good: #4af626;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-good: var(--good);
+
+  --font-macro: var(--font-archivo);
+  --font-data: var(--font-mono-src);
+  --font-mono: var(--font-mono-src);
+
+  /* Zero radius everywhere, no exceptions — see DESIGN.md */
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-full: 0px;
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+/* hairline grid dividers: display:grid + gap:1px + this bg on the parent, surface on children */
+.hairline-grid {
+  background: var(--border);
+  gap: 1px;
+}
+
+/* ---- landing orbit ---- */
+/* The one exemption from the zero-radius rule: the orbit is circular by nature.
+   A class selector outranks the universal one at equal !important. */
+.orbit-round {
+  border-radius: 9999px !important;
+}
+
+/* soft phosphor bands, fading toward the edge, with a faint green core */
+.orbit-glow {
+  background:
+    radial-gradient(circle at center, rgba(74, 246, 38, 0.1) 0 15%, transparent 22%),
+    radial-gradient(circle at center, transparent 27%, rgba(234, 234, 234, 0.07) 31%, transparent 36%),
+    radial-gradient(circle at center, transparent 40%, rgba(234, 234, 234, 0.05) 45%, transparent 51%),
+    radial-gradient(circle at center, transparent 55%, rgba(234, 234, 234, 0.04) 61%, transparent 68%),
+    radial-gradient(circle at center, transparent 70%, rgba(234, 234, 234, 0.03) 76%, transparent 82%);
+  filter: blur(2px);
+}
+
+/* CRT scanlines over the orbit */
+.orbit-scan {
+  background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 0, 0, 0.28) 2px 4px);
+}
