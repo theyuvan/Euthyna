@@ -16,7 +16,7 @@ function TopBar() {
         Viewing vault: <span className="text-ink-dim normal-case">{short(vault)}</span>
         {!wallet.address && isDefault && <span className="ml-1">(default — connect your wallet to see your own)</span>}
       </div>
-      <WalletButton address={wallet.address} connecting={wallet.connecting} error={wallet.error} onConnect={wallet.connect} />
+      <WalletButton address={wallet.address} connecting={wallet.connecting} error={wallet.error} onConnect={wallet.connect} onDisconnect={wallet.disconnect} />
     </div>
   );
 }

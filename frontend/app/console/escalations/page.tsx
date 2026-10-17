@@ -5,7 +5,7 @@ import { getObligations, prepareApproveEscalation, prepareCancelObligation, type
 import { sendPreparedTx } from "@/lib/wallet";
 import { useVault } from "@/lib/useVault";
 import { useWallet } from "@/lib/WalletContext";
-import { Panel, EmptyState, ErrorState, HashLink, WalletButton } from "@/components/primitives";
+import { Panel, EmptyState, ErrorState, HashLink } from "@/components/primitives";
 
 export default function EscalationsPage() {
   const [vault] = useVault();
@@ -30,7 +30,7 @@ export default function EscalationsPage() {
   const escalated = (obligations ?? []).filter((o) => o.status === "ESCALATED");
 
   async function approve(id: number) {
-    if (!wallet.address) return setError("Connect the owner's wallet first.");
+    if (!wallet.address) return setError("Connect the owner's wallet from the top bar first.");
     setBusy(id);
     setError(null);
     try {
@@ -46,7 +46,7 @@ export default function EscalationsPage() {
   }
 
   async function cancel(id: number) {
-    if (!wallet.address) return setError("Connect the owner's wallet first.");
+    if (!wallet.address) return setError("Connect the owner's wallet from the top bar first.");
     setBusy(id);
     setError(null);
     try {
@@ -71,7 +71,6 @@ export default function EscalationsPage() {
             owner can approve or cancel one; this signs with your own wallet, the backend never holds your key.
           </p>
         </div>
-        <WalletButton address={wallet.address} connecting={wallet.connecting} error={wallet.error} onConnect={wallet.connect} />
       </div>
 
       <div className="p-8 space-y-4">

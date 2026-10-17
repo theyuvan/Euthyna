@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { explorerAddress, explorerTx, short } from "@/lib/api";
 
 export function PageHeader({ title, sub }: { title: string; sub?: string }) {
@@ -99,24 +99,85 @@ export function WalletButton({
   connecting,
   error,
   onConnect,
+  onDisconnect,
 }: {
   address: string | null;
   connecting: boolean;
   error: string | null;
   onConnect: () => void;
+  onDisconnect?: () => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // close the menu on an outside click or Escape
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  useEffect(() => {
+    if (!address) setOpen(false);
+  }, [address]);
+
   return (
-    <div className="flex items-center gap-2">
+    <div ref={ref} className="relative flex items-center gap-2">
       {error && <span className="text-[10px] text-accent font-data">{error}</span>}
       <button
-        onClick={onConnect}
+        onClick={() => (address ? setOpen((o) => !o) : onConnect())}
         disabled={connecting}
+        aria-expanded={address ? open : undefined}
         className={`border px-3 py-2 text-xs font-data ${
-          address ? "border-good text-good" : "uppercase border-border text-ink-dim hover:border-good hover:text-good"
+          address ? "border-good text-good hover:bg-good hover:text-bg" : "uppercase border-border text-ink-dim hover:border-good hover:text-good"
         }`}
       >
-        {address ? short(address) : connecting ? "connecting…" : "connect wallet"}
+        {address ? `${short(address)} ${open ? "▴" : "▾"}` : connecting ? "connecting…" : "connect wallet"}
       </button>
+      {address && open && (
+        <div className="absolute right-0 top-full mt-1 z-20 w-64 border border-border bg-surface text-xs font-data">
+          <div className="px-4 py-3 border-b border-border">
+            <div className="text-[10px] uppercase tracking-wide text-ink-dim mb-1">Connected · Arc testnet</div>
+            <div className="text-ink break-all">{address}</div>
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard?.writeText(address).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+              });
+            }}
+            className="block w-full text-left px-4 py-2.5 text-ink-dim hover:text-ink hover:bg-bg uppercase"
+          >
+            {copied ? "copied" : "copy address"}
+          </button>
+          <a
+            href={explorerAddress(address)}
+            target="_blank"
+            rel="noreferrer"
+            className="block px-4 py-2.5 text-ink-dim hover:text-ink hover:bg-bg uppercase"
+          >
+            view on arcscan ↗
+          </a>
+          {onDisconnect && (
+            <button
+              onClick={() => {
+                setOpen(false);
+                onDisconnect();
+              }}
+              className="block w-full text-left px-4 py-2.5 border-t border-border text-accent hover:bg-accent hover:text-ink uppercase"
+            >
+              disconnect
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

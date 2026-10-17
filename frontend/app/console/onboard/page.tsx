@@ -8,7 +8,7 @@ import { vaultAbi } from "@/lib/vault-abi";
 import { publicClient } from "@/lib/chain";
 import { sendPreparedTx } from "@/lib/wallet";
 import { useWallet } from "@/lib/WalletContext";
-import { Panel, WalletButton, HashLink } from "@/components/primitives";
+import { Panel, HashLink } from "@/components/primitives";
 
 type Step = "connect" | "vault" | "payee" | "bill" | "done";
 
@@ -142,16 +142,31 @@ export default function OnboardPage() {
             can&apos;t be sped up. You&apos;ll see the exact go-live time after adding the payee.
           </p>
         </div>
-        <WalletButton address={wallet.address} connecting={wallet.connecting} error={wallet.error} onConnect={wallet.connect} />
       </div>
 
       <div className="p-8 max-w-xl space-y-6">
         {error && <div className="border border-accent text-accent text-xs font-data px-4 py-2">[ ERROR ] {error}</div>}
 
+        <div className={`border px-4 py-3 text-xs font-data ${wallet.address ? "border-good" : "border-border"}`}>
+          <div className="text-[10px] uppercase tracking-wide text-ink-dim mb-1">Owner wallet</div>
+          {wallet.address ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="text-good">●</span>
+              <HashLink hash={wallet.address} kind="address" />
+              <span className="text-ink-dim">connected · this wallet will own the vault and sign every step</span>
+            </div>
+          ) : (
+            <div className="text-ink-dim">
+              Not connected. Use <span className="text-ink">connect wallet</span> in the top bar; that wallet becomes the
+              vault&apos;s owner.
+            </div>
+          )}
+        </div>
+
         <Panel title="Step 1 · Create vault">
           <div className="p-5 space-y-3">
             {!wallet.address ? (
-              <p className="text-xs text-ink-dim">Connect your wallet above first — it becomes this vault&apos;s owner.</p>
+              <p className="text-xs text-ink-dim">Connect your wallet from the top bar first. It becomes this vault&apos;s owner.</p>
             ) : vaultAddress ? (
               <div className="text-xs font-data space-y-1">
                 {businessName.trim() && (

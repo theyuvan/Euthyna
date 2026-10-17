@@ -43,6 +43,23 @@ async function ensureArcTestnet() {
   }
 }
 
+/** Drops this site's account permission in wallets that support it (MetaMask does), so the next
+ *  connect asks again. Wallets without the method just ignore it; the app forgets the account anyway. */
+export async function revokeWallet(): Promise<void> {
+  await provider()
+    .request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] })
+    .catch(() => {});
+}
+
+/** Calls back with the active account (or null) whenever the wallet switches or locks. */
+export function onAccountsChanged(cb: (account: string | null) => void): () => void {
+  const eth = (globalThis as unknown as { ethereum?: { on?: Function; removeListener?: Function } }).ethereum;
+  if (!eth?.on) return () => {};
+  const handler = (accounts: string[]) => cb(accounts?.[0] ?? null);
+  eth.on("accountsChanged", handler);
+  return () => eth.removeListener?.("accountsChanged", handler);
+}
+
 /** Sends a prepared {to, data} as the connected owner account. Returns the tx hash. */
 export async function sendPreparedTx(to: string, data: string, from: string): Promise<string> {
   const hash = (await provider().request({

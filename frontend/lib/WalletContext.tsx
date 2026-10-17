@@ -1,13 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { connectWallet } from "./wallet";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { connectWallet, onAccountsChanged, revokeWallet } from "./wallet";
 
 interface WalletState {
   address: string | null;
   connecting: boolean;
   error: string | null;
   connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
 }
 
 const WalletCtx = createContext<WalletState | null>(null);
@@ -30,7 +31,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  return <WalletCtx.Provider value={{ address, connecting, error, connect }}>{children}</WalletCtx.Provider>;
+  const disconnect = async () => {
+    setAddress(null);
+    setError(null);
+    await revokeWallet();
+  };
+
+  // Follow the wallet: switching accounts updates the address, locking it disconnects.
+  useEffect(() => {
+    if (!address) return;
+    return onAccountsChanged((a) => setAddress(a));
+  }, [address]);
+
+  return <WalletCtx.Provider value={{ address, connecting, error, connect, disconnect }}>{children}</WalletCtx.Provider>;
 }
 
 /** Wallet state shared across every /console page — connect once on any page, it stays
