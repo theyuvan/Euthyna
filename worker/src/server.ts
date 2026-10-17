@@ -417,6 +417,18 @@ export function createServer() {
     }),
   );
 
+  app.post(
+    "/api/vaults/:vault/onboard/obligations/:id/approve-escalation",
+    loadVault,
+    requireOwner("onboard-approve-escalation"),
+    h(async (req: VReq, res) => {
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: "bad id" });
+      const data = encodeFunctionData({ abi: vaultAbi, functionName: "approveEscalation", args: [id] });
+      res.json({ to: getAddress(req.vault.address), data, functionName: "approveEscalation", args: { id } });
+    }),
+  );
+
   // --------------------------------------------------------------------- invoice intake (vision)
 
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
