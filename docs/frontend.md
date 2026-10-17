@@ -8,13 +8,13 @@ system is in [design.md](design.md).
 
 | Route | Page | Data |
 | --- | --- | --- |
-| `/` | Landing page, with the orbit hero, live stats and the one real settled hit | `/api/stats` |
+| `/` | Landing page, with the orbit hero, live stats, the **Live businesses** table (builder-owned rows labeled) and the one real settled hit | `/api/stats`, `/api/businesses` |
 | `/console` | **Treasury**: liquid, reserve, floor, score, limits; upcoming bills; expected inflows | on-chain vault state + DB mirror |
 | `/console/trust` | **Trust**: the autonomous limit as a step chart (it only moves at settlement) and the commitments table | `/trust`, `/commitments` |
 | `/console/decisions` | **Decisions**: every agent run, with what it proposed and its decision hash | `/decisions` |
 | `/console/replay` | **Replay**: re-hashes a decision record in the browser and compares it with the stored and on-chain hash | `/api/decisions/:id` |
 | `/console/escalations` | **Escalations**: approve or cancel bills over the limit, signed by the owner's wallet | `/obligations` + owner routes |
-| `/console/onboard` | **Onboard**: create a vault, add a payee, register a first bill, all signed by your wallet | factory + owner routes |
+| `/console/onboard` | **Onboard**: create a vault (with an optional public business name), add a payee, register a first bill, all signed by your wallet. Guide: [onboarding.md](onboarding.md) | factory + owner routes |
 | `/console/stats` | **Public Stats**: totals across real, non-test vaults | `/api/stats` |
 
 ### Which vault the console shows

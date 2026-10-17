@@ -2,19 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getStats, type Stats } from "@/lib/api";
+import { getBusinesses, getStats, type Business, type Stats } from "@/lib/api";
 import { StatTile, StatRow, HashLink } from "@/components/primitives";
 import { Orbit } from "@/components/orbit";
 
 const REAL_HIT_TX = "0x218692358b25492f59c4958b3960f9688ded4239473263809e5024d0d909d5f1";
 const REAL_HIT_VAULT = "0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5";
+const ONBOARDING_GUIDE = "https://github.com/theyuvan/tameion/blob/main/docs/onboarding.md";
 
 export default function LandingPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [businesses, setBusinesses] = useState<Business[] | null>(null);
 
   useEffect(() => {
     getStats().then(setStats).catch(() => {});
+    getBusinesses().then(setBusinesses).catch(() => {});
   }, []);
+
+  const independent = businesses?.filter((b) => !b.builder).length ?? 0;
 
   return (
     <div className="min-h-full">
@@ -22,6 +27,9 @@ export default function LandingPage() {
       <div className="border-b border-border px-8 py-5 flex items-center justify-between max-w-[1280px] mx-auto">
         <div className="font-macro text-base tracking-tight">EUTHYNA</div>
         <nav className="flex items-center gap-6 text-xs font-data text-ink-dim">
+          <a href="#businesses" className="hover:text-ink">
+            BUSINESSES
+          </a>
           <a href="#proof" className="hover:text-ink">
             PROOF
           </a>
@@ -76,6 +84,71 @@ export default function LandingPage() {
             <StatTile label="Businesses live" value={stats.businesses} />
           </StatRow>
         )}
+      </section>
+
+      {/* businesses */}
+      <section id="businesses" className="max-w-[1280px] mx-auto px-8 py-16 border-b border-border">
+        <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-2">[ WHO IS BEHIND THE NUMBERS ]</div>
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+          <h2 className="font-macro uppercase text-2xl tracking-tight">Live businesses</h2>
+          {businesses && (
+            <div className="font-data text-xs text-ink-dim">
+              {independent} independent · {businesses.length - independent} run by the builder
+            </div>
+          )}
+        </div>
+        {!businesses ? (
+          <div className="text-xs text-ink-dim font-data">Loading from the live backend…</div>
+        ) : (
+          <div className="border border-border overflow-x-auto">
+            <table className="w-full text-xs font-data">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wide text-ink-dim border-b border-border text-left">
+                  <th className="px-4 py-3 font-normal">Business</th>
+                  <th className="px-4 py-3 font-normal">Owner wallet</th>
+                  <th className="px-4 py-3 font-normal">Vaults</th>
+                  <th className="px-4 py-3 font-normal text-right">Bills paid by agent</th>
+                  <th className="px-4 py-3 font-normal text-right">USDC</th>
+                  <th className="px-4 py-3 font-normal text-right">Commitments</th>
+                  <th className="px-4 py-3 font-normal text-right">Hit / miss</th>
+                </tr>
+              </thead>
+              <tbody>
+                {businesses.map((b) => (
+                  <tr key={b.owner} className="border-b border-border last:border-b-0">
+                    <td className="px-4 py-3">
+                      <span className="text-ink">{b.business ?? "Unnamed"}</span>
+                      {b.builder && <span className="ml-2 border border-border px-1.5 py-0.5 text-[10px] text-ink-dim uppercase">builder</span>}
+                    </td>
+                    <td className="px-4 py-3"><HashLink hash={b.owner} kind="address" /></td>
+                    <td className="px-4 py-3 space-x-2">
+                      {b.vaults.map((v) => (
+                        <Link key={v} href={`/console?vault=${v}`} className="text-ink-dim hover:text-good underline decoration-border underline-offset-2">
+                          {v.slice(0, 6)}…{v.slice(-4)}
+                        </Link>
+                      ))}
+                    </td>
+                    <td className="px-4 py-3 text-right">{b.bills_paid_autonomously}</td>
+                    <td className="px-4 py-3 text-right">{Number(b.usdc_paid).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right">{b.commitments_opened}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="text-good">{b.hits}</span> / <span className={b.misses ? "text-accent" : ""}>{b.misses}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="mt-6 flex flex-wrap items-center gap-4">
+          <Link href="/console/onboard" className="border border-good text-good px-5 py-3 text-xs font-data uppercase hover:bg-good hover:text-bg">
+            Put your treasury on Euthyna
+          </Link>
+          <a href={ONBOARDING_GUIDE} target="_blank" rel="noreferrer" className="text-xs font-data text-ink-dim hover:text-ink underline decoration-border underline-offset-2">
+            5-minute guide
+          </a>
+          <span className="text-[10px] text-ink-dim font-data">Test vaults are excluded. Each business is one owner wallet.</span>
+        </div>
       </section>
 
       {/* proof */}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { encodeFunctionData, parseEventLogs, getAddress } from "viem";
-import { createAgentWallet, prepareAddPayee, prepareRegisterObligation } from "@/lib/api";
+import { createAgentWallet, prepareAddPayee, prepareRegisterObligation, setBusinessName } from "@/lib/api";
 import { factoryAbi, FACTORY_ADDRESS } from "@/lib/factory-abi";
 import { vaultAbi } from "@/lib/vault-abi";
 import { publicClient } from "@/lib/chain";
@@ -25,6 +25,8 @@ export default function OnboardPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [businessName, setBusinessNameInput] = useState("");
+  const [businessSaved, setBusinessSaved] = useState(false);
   const [agentAddress, setAgentAddress] = useState<string | null>(null);
   const [vaultAddress, setVaultAddress] = useState<string | null>(null);
   const [vaultTx, setVaultTx] = useState<string | null>(null);
@@ -92,6 +94,13 @@ export default function OnboardPage() {
       setPayeeLiveInMin(Math.max(0, Math.round((liveAt - Date.now()) / 60000)));
       setBillDue(toLocalInput(liveAt + 60 * 60 * 1000)); // a sensible default: an hour after go-live
       setStep("bill");
+      // The name is off-chain metadata, saved now that the backend has indexed the vault. Optional,
+      // so a failure here (e.g. the signature request is declined) never blocks the bill step.
+      if (businessName.trim() && !businessSaved) {
+        await setBusinessName(vaultAddress, businessName.trim(), wallet.address)
+          .then(() => setBusinessSaved(true))
+          .catch(() => {});
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -145,11 +154,19 @@ export default function OnboardPage() {
               <p className="text-xs text-ink-dim">Connect your wallet above first — it becomes this vault&apos;s owner.</p>
             ) : vaultAddress ? (
               <div className="text-xs font-data space-y-1">
+                {businessName.trim() && (
+                  <div>
+                    business: {businessName.trim()}{" "}
+                    <span className="text-ink-dim">{businessSaved ? "(saved)" : "(saved with the payee step)"}</span>
+                  </div>
+                )}
                 <div>vault: <HashLink hash={vaultAddress} kind="address" /></div>
                 <div>agent: {agentAddress && <HashLink hash={agentAddress} kind="address" />}</div>
                 {vaultTx && <div>tx: <HashLink hash={vaultTx} kind="tx" /></div>}
               </div>
             ) : (
+              <>
+              <Field label="Business name (optional, shown publicly)" value={businessName} onChange={setBusinessNameInput} placeholder="e.g. Asha's Bakery" />
               <button
                 onClick={createVault}
                 disabled={busy}
@@ -157,6 +174,7 @@ export default function OnboardPage() {
               >
                 {busy ? "creating…" : "Create a real vault owned by me"}
               </button>
+              </>
             )}
           </div>
         </Panel>

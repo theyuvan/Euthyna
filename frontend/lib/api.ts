@@ -49,6 +49,7 @@ async function post<T>(path: string, body: unknown, auth?: OwnerAuth): Promise<T
 
 export interface Stats {
   businesses: string;
+  independent_businesses?: string;
   vaults: string;
   bills_paid_autonomously: string;
   usdc_paid: string;
@@ -64,6 +65,21 @@ export interface Stats {
   blocked_or_clamped_by_policy: string;
 }
 export const getStats = () => get<Stats>("/api/stats");
+
+/** One row per business (distinct owner wallet), active non-test vaults only. */
+export interface Business {
+  owner: string;
+  builder: boolean;
+  business: string | null;
+  joined_at: string;
+  vaults: string[];
+  bills_paid_autonomously: number;
+  usdc_paid: string;
+  commitments_opened: number;
+  hits: number;
+  misses: number;
+}
+export const getBusinesses = () => get<Business[]>("/api/businesses");
 
 export interface VaultSummary {
   id: string;
@@ -241,6 +257,8 @@ const ownerAuth = (vault: string, action: string, from: string): OwnerAuth => ({
 
 export const resolveAlert = (vault: string, id: string, from: string) =>
   post(`/api/vaults/${vault}/alerts/${id}/resolve`, {}, ownerAuth(vault, "resolve-alert", from));
+export const setBusinessName = (vault: string, name: string, from: string) =>
+  post(`/api/vaults/${vault}/business`, { name }, ownerAuth(vault, "business", from));
 export const runAgentNow = (vault: string, from: string) => post(`/api/vaults/${vault}/run`, {}, ownerAuth(vault, "run", from));
 export const settleNow = (vault: string, from: string) => post(`/api/vaults/${vault}/settle`, {}, ownerAuth(vault, "settle", from));
 export const addInflow = (
