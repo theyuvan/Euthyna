@@ -30,6 +30,136 @@
 
 ---
 
+## Where the agent lives
+
+The AI agent is in [`backend/src/`](backend/src/). One run of the agent goes through these files, in order:
+
+| Step | File | What it does |
+|---|---|---|
+| **Loop** | [`agent.ts`](backend/src/agent.ts) | One full run: snapshot → decide → check → hash → execute |
+| **Perceive** | [`snapshot.ts`](backend/src/snapshot.ts) | Reads the vault's state from the chain and the database |
+| **Ground truth** | [`precompute.ts`](backend/src/precompute.ts) | Code computes every number the model can't override: payable bills, bills that must be escalated, sweep horizons, whether a sweep is allowed |
+| **Reason** | [`llm.ts`](backend/src/llm.ts), [`llm-chain.ts`](backend/src/llm-chain.ts) | The LLM proposes actions as schema-checked JSON, falling back across free models |
+| **Guardrails** | [`policy.ts`](backend/src/policy.ts) | Rejects or clamps any action outside the rules ([12 tests](backend/src/policy.test.ts)) |
+| **Record** | [`canonical.ts`](backend/src/canonical.ts) | Hashes the full decision (keccak256) before any money moves |
+| **Act** | [`executor.ts`](backend/src/executor.ts) | Simulates, then sends through the agent's Circle smart-contract wallet |
+| **Narrate** | [`events.ts`](backend/src/events.ts) | Streams each stage live over SSE |
+| **Wake up** | [`scheduler.ts`](backend/src/scheduler.ts) | Runs the agent every 30 minutes and when new vault events arrive |
+
+Around it: [`settler.ts`](backend/src/settler.ts) settles matured commitments, [`indexer.ts`](backend/src/indexer.ts)
+mirrors chain events into Postgres, and [`invoice.ts`](backend/src/invoice.ts) turns an invoice image into a bill.
+
+The **judge** is not part of the agent: [`EuthynaVault.sol`](contract/src/EuthynaVault.sol) grades every promise the
+agent makes, and the agent has no way to change its own score.
+
+### How the agent works
+
+**When it runs:** every 30 minutes, whenever new vault events are indexed (a new bill, a payee, a deposit), after
+a commitment settles, or on demand. Only one run per vault at a time (a Postgres advisory lock), and before
+deciding it reconciles any transaction a previous run left in flight, so a crash can't cause a double send.
+
+**One run, step by step:**
+
+1. **Perceive** ([`snapshot.ts`](backend/src/snapshot.ts)): reads liquid cash, reserve, floor, limits, open bills,
+   payees, open commitments, past hits and misses, and expected inflows.
+2. **Compute the ground truth** ([`precompute.ts`](backend/src/precompute.ts)): code works out which bills are
+   payable now, which must go to the owner, the safe sweep amount for each horizon, and whether a sweep is
+   allowed at all.
+3. **Reason** ([`llm.ts`](backend/src/llm.ts)): the model gets that view and answers in schema-checked JSON with one or
+   more actions (`pay`, `sweep`, `redeem`, `escalate` or `hold`), each with a reason, plus a confidence score. If a
+   model fails or runs out of quota, the next one in the chain answers.
+4. **Check** ([`policy.ts`](backend/src/policy.ts)): every proposal is tested against code-computed numbers and the
+   contract's own rules, so a transaction that would fail is never sent.
+   - A payment above the limit or daily cap is **converted** into an escalation to the owner.
+   - A sweep is **clamped** to the safe amount and a 1-hour to 14-day horizon. One sweep per run, and never a
+     redeem and a sweep together (no churn).
+   - **Safety net:** any bill due within 2 hours is paid even if the model forgot it, pulling cash back from
+     reserve if needed, and any over-limit bill is escalated so the owner sees it.
+5. **Record** ([`canonical.ts`](backend/src/canonical.ts)): the full decision (snapshot, computed numbers, the model's
+   output and every policy verdict) is hashed with keccak256 and stored.
+6. **Act** ([`agent.ts`](backend/src/agent.ts), [`executor.ts`](backend/src/executor.ts)): in the order redeem → pay →
+   escalate → sweep, each action is simulated, then sent through the agent's Circle wallet with the decision hash
+   and an idempotency key. Each stage streams live over SSE.
+7. **Get graded** ([`EuthynaVault.sol`](contract/src/EuthynaVault.sol)): every sweep is a promise. When its deadline
+   passes, the contract grades it, and the agent's limit moves with the result.
+
+**How it makes a treasury more efficient:**
+
+- **Bills pay themselves.** Due bills are paid on time from the agent's wallet, with no manual payment runs. The
+  owner only steps in for bills above the agent's limit.
+- **It reacts in seconds.** A new bill triggers a run straight away; the agent's first production commitment was
+  made right after a new bill was registered.
+- **Cash goes where it's needed.** Spare cash above the floor and upcoming bills moves to reserve, and the agent
+  pulls it back before paying when a bill needs it.
+- **Approvals shrink as trust grows.** Every kept promise raises the autonomous limit, so over time fewer bills
+  need the owner's approval. One miss halves the score, so a careless agent loses that freedom fast.
+- **No wasted transactions.** Every action is simulated first, so nothing is sent that the contract would reject:
+  0 failed actions so far.
+- **Retries never pay twice.** Each action has an idempotency key derived from its decision, so a retry after a
+  crash or timeout can't send the same payment again.
+- **It keeps running.** If one AI model fails, the next answers; if the RPC fails, a fallback takes over; if the
+  model forgets an urgent bill, the safety net pays it.
+
+### How the agent performs
+
+Measured on the real (non-test) vaults, as of 18 Oct 2026:
+
+| Metric | Result |
+|---|---|
+| Decisions made on its own | **75**: 8 took action, 67 held (nothing due or no safe action) |
+| On-chain actions sent | **9**, with **0 failures** |
+| Decision → confirmed on-chain | **6.7 s** on average |
+| One full run (snapshot → LLM → policy → hash → done) | **about 9 s** |
+| Model proposals corrected by the policy layer | **29**, caught before reaching the chain |
+| Models that answered | **5+**, switched automatically when one failed or hit its quota |
+| Commitments graded by the contract | **1 hit, 0 misses** |
+| Gas the agent has to hold | **none**: Circle Gas Station sponsors its transactions |
+
+Every number can be checked against Arcscan, the public [`/api/stats`](https://euthyna-np2i.onrender.com/api/stats)
+endpoint, and the agent's decision feed in the console.
+
+```
+euthyna/
+├── backend/src/
+│   ├── agent.ts          ◀ the agent loop
+│   ├── snapshot.ts       ◀ perceive
+│   ├── precompute.ts     ◀ ground truth
+│   ├── llm.ts            ◀ reason
+│   ├── llm-chain.ts      ◀ model fallback
+│   ├── policy.ts         ◀ guardrails
+│   ├── canonical.ts      ◀ decision hash
+│   ├── executor.ts       ◀ act (Circle wallet)
+│   ├── events.ts         ◀ live stream
+│   ├── scheduler.ts      ◀ wake-up timer
+│   ├── settler.ts, indexer.ts, invoice.ts, server.ts, …
+└── contract/src/
+    └── EuthynaVault.sol  ◀ the judge (scores the agent)
+```
+
+---
+
+## Euthyna MCP server
+
+Talk to Euthyna from any AI assistant. [`mcp/`](mcp/) is a [Model Context Protocol](https://modelcontextprotocol.io)
+server (stdio and Streamable HTTP) for Claude Code, Claude Desktop, Cursor and other MCP clients. It is
+read-only and holds no keys.
+
+- **14 tools:** vault state, bills, payees, commitments (including when each can be settled), trust history,
+  agent decisions, `verify_decision` (re-hashes a decision locally and checks it against the chain), and
+  builders for unsigned `settle`, `addPayee` and `registerObligation` transactions.
+- **Resources:** how-it-works docs, contract addresses, and `euthyna://vault/{address}` for any vault's live state.
+- **Prompts:** `treasury_report`, `audit_decision`, `explain_trust`.
+
+```bash
+cd mcp && npm install
+claude mcp add euthyna -- node "$(pwd)/dist/index.js"
+```
+
+Then ask: *"Has the Euthyna agent kept its promises? Verify its last decision that moved money."*
+Setup for Claude Desktop, Cursor and HTTP: [mcp/README.md](mcp/README.md).
+
+---
+
 ## 1. What is Euthyna?
 
 Euthyna is a treasury agent for small businesses on Arc. It pays bills, keeps enough cash on hand for what's
@@ -496,6 +626,10 @@ euthyna/
 │   │   └── console/              # treasury, trust, decisions, replay, escalations, onboard, stats
 │   ├── components/
 │   └── lib/                      # api client, wallet, chain, ABIs
+│
+├── mcp/                          # MCP server: Euthyna tools for any AI assistant
+│   ├── src/server.ts             # tools, resources and prompts
+│   └── src/index.ts              # stdio and Streamable HTTP transports
 │
 └── docs/
     ├── contract.md               # mechanism, scoring, loophole audit, addresses
