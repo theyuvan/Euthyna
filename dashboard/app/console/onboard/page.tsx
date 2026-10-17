@@ -4,12 +4,20 @@ import { useState } from "react";
 import { encodeFunctionData, parseEventLogs, getAddress } from "viem";
 import { createAgentWallet, prepareAddPayee, prepareRegisterObligation } from "@/lib/api";
 import { factoryAbi, FACTORY_ADDRESS } from "@/lib/factory-abi";
+import { vaultAbi } from "@/lib/vault-abi";
 import { publicClient } from "@/lib/chain";
 import { sendPreparedTx } from "@/lib/wallet";
 import { useWallet } from "@/lib/WalletContext";
 import { Panel, WalletButton, HashLink } from "@/components/primitives";
 
 type Step = "connect" | "vault" | "payee" | "bill" | "done";
+
+/** ms epoch -> "YYYY-MM-DDTHH:mm" in local time, the format a datetime-local input takes */
+function toLocalInput(ms: number) {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 export default function OnboardPage() {
   const wallet = useWallet();
@@ -26,6 +34,9 @@ export default function OnboardPage() {
   const [maxInvoice, setMaxInvoice] = useState("50");
   const [maxMonth, setMaxMonth] = useState("200");
   const [payeeTx, setPayeeTx] = useState<string | null>(null);
+  // when the contract lets the agent pay this payee (its anti-sabotage delay), read from chain
+  const [payeeLiveAt, setPayeeLiveAt] = useState<number | null>(null);
+  const [payeeLiveInMin, setPayeeLiveInMin] = useState<number | null>(null);
 
   const [billAmount, setBillAmount] = useState("");
   const [billDue, setBillDue] = useState("");
@@ -68,6 +79,18 @@ export default function OnboardPage() {
       );
       const hash = await sendPreparedTx(to, data, wallet.address);
       setPayeeTx(hash);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
+      if (receipt.status !== "success") throw new Error("addPayee transaction reverted");
+      const p = await publicClient.readContract({
+        address: getAddress(vaultAddress),
+        abi: vaultAbi,
+        functionName: "getPayee",
+        args: [getAddress(payeeAddr)],
+      });
+      const liveAt = Number(p.activeAt) * 1000;
+      setPayeeLiveAt(liveAt);
+      setPayeeLiveInMin(Math.max(0, Math.round((liveAt - Date.now()) / 60000)));
+      setBillDue(toLocalInput(liveAt + 60 * 60 * 1000)); // a sensible default: an hour after go-live
       setStep("bill");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -75,6 +98,8 @@ export default function OnboardPage() {
       setBusy(false);
     }
   }
+
+  const dueTooEarly = Boolean(payeeLiveAt && billDue && new Date(billDue).getTime() < payeeLiveAt);
 
   async function addBill() {
     if (!wallet.address || !vaultAddress) return;
@@ -103,8 +128,9 @@ export default function OnboardPage() {
           <h1 className="font-macro text-3xl tracking-tight uppercase">Onboard</h1>
           <p className="text-xs text-ink-dim mt-2 max-w-2xl leading-relaxed">
             A real vault, a real agent wallet, one real payee, one real bill — under 5 minutes. Your wallet signs
-            every step; nobody else ever holds your key. Note: a new payee needs the contract&apos;s own activation
-            delay (10 min minimum) before the agent can pay it — that part can&apos;t be sped up here, by design.
+            every step; nobody else ever holds your key. Note: a new payee is locked for the vault&apos;s activation
+            delay (set per vault, never under 10 minutes) before the agent can pay it — an anti-sabotage rule that
+            can&apos;t be sped up. You&apos;ll see the exact go-live time after adding the payee.
           </p>
         </div>
         <WalletButton address={wallet.address} connecting={wallet.connecting} error={wallet.error} onConnect={wallet.connect} />
@@ -139,7 +165,17 @@ export default function OnboardPage() {
           <Panel title="Step 2 · Add a payee">
             <div className="p-5 space-y-3">
               {payeeTx ? (
-                <div className="text-xs font-data">payee added — tx: <HashLink hash={payeeTx} kind="tx" /></div>
+                <div className="text-xs font-data space-y-1">
+                  <div>payee added — tx: <HashLink hash={payeeTx} kind="tx" /></div>
+                  {payeeLiveAt ? (
+                    <div className="text-ink-dim">
+                      goes live at <span className="text-ink">{new Date(payeeLiveAt).toLocaleString()}</span>
+                      {payeeLiveInMin !== null && <> (in {payeeLiveInMin} min)</>} — the agent can&apos;t pay it before then.
+                    </div>
+                  ) : (
+                    <div className="text-ink-dim">waiting for confirmation…</div>
+                  )}
+                </div>
               ) : (
                 <>
                   <Field label="Payee address" value={payeeAddr} onChange={setPayeeAddr} placeholder="0x..." />
@@ -165,11 +201,23 @@ export default function OnboardPage() {
           <Panel title="Step 3 · Register your first real bill">
             <div className="p-5 space-y-3">
               <Field label="Amount (USDC)" value={billAmount} onChange={setBillAmount} placeholder="e.g. 10" />
-              <Field label="Due date" value={billDue} onChange={setBillDue} type="datetime-local" />
+              <Field
+                label="Due date"
+                value={billDue}
+                onChange={setBillDue}
+                type="datetime-local"
+                min={payeeLiveAt ? toLocalInput(payeeLiveAt) : undefined}
+              />
+              {dueTooEarly && (
+                <div className="border border-accent text-accent text-xs font-data px-3 py-2">
+                  [ TOO EARLY ] This is before the payee goes live ({new Date(payeeLiveAt!).toLocaleTimeString()}), so
+                  the agent couldn&apos;t pay it on time. Pick a later due date.
+                </div>
+              )}
               <Field label="Invoice number" value={billInvoice} onChange={setBillInvoice} placeholder="e.g. INV-001" />
               <button
                 onClick={addBill}
-                disabled={busy || !billAmount || !billDue || !billInvoice}
+                disabled={busy || !billAmount || !billDue || !billInvoice || dueTooEarly}
                 className="border border-good text-good px-4 py-2 text-xs font-data uppercase hover:bg-good hover:text-bg disabled:opacity-50"
               >
                 {busy ? "sending…" : "Register bill"}
@@ -196,18 +244,21 @@ function Field({
   onChange,
   placeholder,
   type = "text",
+  min,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  min?: string;
 }) {
   return (
     <label className="block">
       <span className="block text-[10px] uppercase tracking-wide text-ink-dim mb-1">{label}</span>
       <input
         type={type}
+        min={min}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
