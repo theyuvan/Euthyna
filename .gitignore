@@ -18,3 +18,7 @@ recovery_file_*.dat
 
 # Playwright MCP screenshots and logs
 .playwright-mcp/
+
+# Local tool config, never committed
+.mcp.json
+skills-lock.json
