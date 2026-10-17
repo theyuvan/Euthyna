@@ -10,6 +10,12 @@ liquid cash.* After T anyone can call `settle()`, and the contract grades the cl
 
 Built for the Tameion Agents Hackathon (Canteen × Circle, on Arc).
 
+**Live:**
+- **App:** [euthynax.vercel.app](https://euthynax.vercel.app). The console is at
+  [/console](https://euthynax.vercel.app/console), and the one settled hit at
+  [/console/trust?vault=0x4a08…](https://euthynax.vercel.app/console/trust?vault=0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5).
+- **API:** [euthyna-np2i.onrender.com](https://euthyna-np2i.onrender.com/api/stats).
+
 ## Project structure
 
 ```
@@ -98,7 +104,7 @@ Every claim below can be checked on [Arcscan](https://testnet.arcscan.app) or ag
 | RPC resilience | ✅ moved to `rpc.testnet.arc.io` after the old domain was retired, with a Blockdaemon fallback and Multicall3-batched reads; outages surface as a clean 503 the frontend auto-retries |
 | Recurring bills (`addRecurring` / `materializeRecurring`) | 🟨 contract and settler wired; no API route or UI to add one yet |
 | Reserve yield (USYC) | ⬜ stubbed: internal bucket only, no yield; Circle allowlist ticket not filed |
-| Hosted deployment | ⬜ not yet: `render.yaml` (backend) is ready; the frontend deploys to any Next.js host |
+| Hosted deployment | ✅ backend on Render ([`/health`](https://euthyna-np2i.onrender.com/health)), frontend on Vercel ([euthynax.vercel.app](https://euthynax.vercel.app)) |
 
 ## Quickstart
 
