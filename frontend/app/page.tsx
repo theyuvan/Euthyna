@@ -13,9 +13,29 @@ export default function LandingPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [businesses, setBusinesses] = useState<Business[] | null>(null);
 
+  const [offline, setOffline] = useState(false);
+
+  // The hosted backend can take ~a minute to wake after idling, so retry for a while before
+  // saying it's unreachable, instead of showing "Loading" forever.
   useEffect(() => {
-    getStats().then(setStats).catch(() => {});
-    getBusinesses().then(setBusinesses).catch(() => {});
+    let live = true;
+    const load = async (attempt: number): Promise<void> => {
+      try {
+        const [s, b] = await Promise.all([getStats(), getBusinesses()]);
+        if (!live) return;
+        setStats(s);
+        setBusinesses(b);
+        setOffline(false);
+      } catch {
+        if (!live) return;
+        if (attempt >= 2) setOffline(true);
+        if (attempt < 12) setTimeout(() => load(attempt + 1), 5000);
+      }
+    };
+    load(0);
+    return () => {
+      live = false;
+    };
   }, []);
 
   const independent = businesses?.filter((b) => !b.builder).length ?? 0;
@@ -71,7 +91,7 @@ export default function LandingPage() {
       <section className="max-w-[1280px] mx-auto px-8 py-16 border-b border-border">
         <div className="text-[10px] uppercase tracking-widest text-ink-dim mb-6">[ LIVE, REAL NUMBERS — NO TEST VAULTS ]</div>
         {!stats ? (
-          <div className="text-xs text-ink-dim font-data">Loading from the live backend…</div>
+          <LoadingLine offline={offline} />
         ) : (
           <StatRow>
             <StatTile label="Bills paid autonomously" value={stats.bills_paid_autonomously} />
@@ -94,7 +114,7 @@ export default function LandingPage() {
           )}
         </div>
         {!businesses ? (
-          <div className="text-xs text-ink-dim font-data">Loading from the live backend…</div>
+          <LoadingLine offline={offline} />
         ) : (
           <div className="border border-border overflow-x-auto">
             <table className="w-full text-xs font-data">
@@ -211,6 +231,14 @@ export default function LandingPage() {
         <span>Arc testnet · chain 5042002</span>
         <span>testnet.arcscan.app</span>
       </footer>
+    </div>
+  );
+}
+
+function LoadingLine({ offline }: { offline: boolean }) {
+  return (
+    <div className="text-xs text-ink-dim font-data">
+      {offline ? "[ WAKING THE BACKEND ] The hosted API is starting up. Retrying every few seconds…" : "Loading from the live backend…"}
     </div>
   );
 }
