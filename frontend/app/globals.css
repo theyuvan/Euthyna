@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Dark-only, single substrate — see DESIGN.md. No light mode, this is an operator console. */
+/* Dark-only, single substrate — see docs/design.md. No light mode, this is an operator console. */
 :root {
   --bg: #0a0a0a;
   --surface: #121212;
@@ -24,7 +24,7 @@
   --font-data: var(--font-mono-src);
   --font-mono: var(--font-mono-src);
 
-  /* Zero radius everywhere, no exceptions — see DESIGN.md */
+  /* Zero radius everywhere, no exceptions — see docs/design.md */
   --radius-none: 0px;
   --radius-sm: 0px;
   --radius-md: 0px;

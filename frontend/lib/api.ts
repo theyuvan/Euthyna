@@ -1,5 +1,5 @@
 // Thin client over the real worker API. No mocking, no fallback data — every shape here matches
-// what worker/src/server.ts actually returns, verified live against the real backend.
+// what backend/src/server.ts actually returns, verified live against the real backend.
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8787";
 

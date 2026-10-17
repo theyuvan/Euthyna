@@ -2,14 +2,15 @@ node_modules/
 .env
 .env.*
 !.env.example
-contracts/out/
-contracts/cache/
-contracts/broadcast/*/31337/
+contract/out/
+contract/cache/
+contract/broadcast/*/31337/
 dist/
 .next/
 *.log
-worker/circle-recovery.dat
-worker/recovery_file_*.dat
+# Circle entity-secret recovery files — secrets, never commit (matched anywhere)
+circle-recovery.dat
+recovery_file_*.dat
 
 # third-party design "taste" skills (Leonxlnx/taste-skill) — local tooling, not project code
 .agents/skills/brandkit/

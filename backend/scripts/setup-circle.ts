@@ -8,10 +8,10 @@ import { initiateDeveloperControlledWalletsClient, registerEntitySecretCiphertex
 
 const apiKey = process.env.CIRCLE_API_KEY;
 const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
-if (!apiKey) throw new Error("Set CIRCLE_API_KEY in worker/.env first (console.circle.com > API keys, testnet key)");
+if (!apiKey) throw new Error("Set CIRCLE_API_KEY in backend/.env first (console.circle.com > API keys, testnet key)");
 
 if (!entitySecret) {
-  console.log("No CIRCLE_ENTITY_SECRET yet. Add this line to worker/.env, keep it secret, then rerun:\n");
+  console.log("No CIRCLE_ENTITY_SECRET yet. Add this line to backend/.env, keep it secret, then rerun:\n");
   console.log(`CIRCLE_ENTITY_SECRET=${randomBytes(32).toString("hex")}`);
   process.exit(0);
 }
@@ -21,7 +21,7 @@ if (!existsSync(recoveryPath)) {
   try {
     const r = await registerEntitySecretCiphertext({ apiKey, entitySecret });
     writeFileSync(recoveryPath, r.data?.recoveryFile ?? "");
-    console.log(`entity secret registered; recovery file saved to worker/${recoveryPath} (back it up, never commit it)`);
+    console.log(`entity secret registered; recovery file saved to backend/${recoveryPath} (back it up, never commit it)`);
   } catch (e: any) {
     console.log("register skipped:", e?.response?.data?.message ?? e?.message, "(fine if it was already registered)");
   }
@@ -32,5 +32,5 @@ if (process.env.CIRCLE_WALLET_SET_ID) {
   console.log("CIRCLE_WALLET_SET_ID already set:", process.env.CIRCLE_WALLET_SET_ID);
 } else {
   const ws = await client.createWalletSet({ name: "euthyna-agents" });
-  console.log(`Add to worker/.env:\nCIRCLE_WALLET_SET_ID=${ws.data?.walletSet?.id}`);
+  console.log(`Add to backend/.env:\nCIRCLE_WALLET_SET_ID=${ws.data?.walletSet?.id}`);
 }

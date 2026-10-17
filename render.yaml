@@ -1,8 +1,8 @@
 services:
   - type: web
-    name: euthyna-worker
+    name: euthyna-backend
     runtime: node
-    rootDir: worker
+    rootDir: backend
     plan: free
     buildCommand: npm install
     startCommand: npm start

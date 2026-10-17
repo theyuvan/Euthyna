@@ -62,12 +62,12 @@ Terminal, not ornamental. The product's thesis, a continuous, replayable audit, 
 - **Hero, in two columns.**
   - **Left:** the `[ AI TREASURY · ARC TESTNET ]` tag, a huge uppercase headline ("AN AI TREASURER ON PROBATION."), the copy, and two square CTAs.
   - **Right:** the **orbit**.
-- **Orbit** (`components/orbit.tsx`), in the terminal palette:
+- **Orbit** (`frontend/components/orbit.tsx`), in the terminal palette:
   - **Motion:** two streams, from the top-right and the bottom-left, flow continuously into the Euthyna emblem. They curl clockwise, shrink and fade. The animation runs on `requestAnimationFrame` and stays still under `prefers-reduced-motion`.
   - **Background and texture:** soft phosphor-white bands with a faint green core, and CRT scanlines (`.orbit-scan`) over the whole orbit.
   - **Badges:** utility badges in phosphor white, graphite and grey, with the one green.
-  - **Logos:** Arc, Circle and USDC are official marks from arc.io and circle.com (`public/logos/`), kept in their own brand colours. No third-party ecosystem logos (Visa, Mastercard and so on), because they'd imply partnerships Euthyna doesn't have.
-  - **Emblem** (`components/mark.tsx`): flat. A balance scale in a hairline ring with one green status dot.
+  - **Logos:** Arc, Circle and USDC are official marks from arc.io and circle.com (`frontend/public/logos/`), kept in their own brand colours. No third-party ecosystem logos (Visa, Mastercard and so on), because they'd imply partnerships Euthyna doesn't have.
+  - **Emblem** (`frontend/components/mark.tsx`): flat. A balance scale in a hairline ring with one green status dot.
 - **Sections:** `[ LIVE, REAL NUMBERS — NO TEST VAULTS ]` (real `/api/stats`); the one real settled hit, labeled as a test vault; a 3-column hairline how-it-works grid (Commit, Settle, Earn); the footer.
 
 ## Rules

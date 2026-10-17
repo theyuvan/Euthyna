@@ -17,7 +17,8 @@
     "gen-abi": "node scripts/gen-abi.mjs",
     "typecheck": "tsc -p .",
     "test": "tsx --test src/policy.test.ts",
-    "e2e:local": "tsx scripts/e2e-local.ts"
+    "e2e:local": "tsx scripts/e2e-local.ts",
+    "demo-wallet": "tsx scripts/demo-wallet-bridge.ts"
   },
   "author": "",
   "license": "ISC",

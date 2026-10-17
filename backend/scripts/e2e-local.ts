@@ -58,7 +58,7 @@ const step = (s: string) => console.log(`\n== ${s}`);
 
 // 1. Mock USDC at the Arc USDC address, factory deployed.
 step("chain setup");
-const outDir = fileURLToPath(new URL("../../contracts/out/", import.meta.url));
+const outDir = fileURLToPath(new URL("../../contract/out/", import.meta.url));
 const mock = JSON.parse(readFileSync(join(outDir, "MockUSDC.sol", "MockUSDC.json"), "utf8"));
 await test.setCode({ address: USDC, bytecode: mock.deployedBytecode.object });
 const mockAbi = mock.abi;
@@ -78,7 +78,7 @@ const { createServer } = await import("../src/server.js");
 
 step("schema");
 await pool.query("drop schema public cascade; create schema public;");
-await pool.query(readFileSync(fileURLToPath(new URL("../../db/schema.sql", import.meta.url)), "utf8"));
+await pool.query(readFileSync(fileURLToPath(new URL("../db/schema.sql", import.meta.url)), "utf8"));
 
 // 2. Owner creates a vault for the agent, funds it, adds a payee, registers real bills.
 step("vault setup");

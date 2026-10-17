@@ -7,7 +7,7 @@ import { getDecisionReplay, type DecisionReplay } from "@/lib/api";
 import { Panel, EmptyState, ErrorState, HashText } from "@/components/primitives";
 
 /** Independent of the server's own claim: hashes the stored canonical_json right here, in this
- *  browser, the same way worker/src/canonical.ts does (keccak256 of the UTF-8 bytes) — so a viewer
+ *  browser, the same way backend/src/canonical.ts does (keccak256 of the UTF-8 bytes) — so a viewer
  *  doesn't have to trust our backend's arithmetic, only the public record and their own browser. */
 function recomputeInBrowser(canonicalJson: string): `0x${string}` {
   return `0x${keccak256(canonicalJson)}`;

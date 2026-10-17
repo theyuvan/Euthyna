@@ -26,4 +26,4 @@ const params = {
 const hash = await wallet.deployContract({ abi: factoryAbi, bytecode: factoryBytecode, args: [USDC, params] });
 const receipt = await publicClient.waitForTransactionReceipt({ hash });
 console.log(`EuthynaFactory ${receipt.contractAddress}\nblock ${receipt.blockNumber}\ntx ${hash}`);
-console.log(`Add to worker/.env:\nFACTORY_ADDRESS=${receipt.contractAddress}\nFACTORY_START_BLOCK=${receipt.blockNumber}`);
+console.log(`Add to backend/.env:\nFACTORY_ADDRESS=${receipt.contractAddress}\nFACTORY_START_BLOCK=${receipt.blockNumber}`);
