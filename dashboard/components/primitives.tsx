@@ -111,8 +111,8 @@ export function WalletButton({
       <button
         onClick={onConnect}
         disabled={connecting}
-        className={`border px-3 py-2 text-xs font-data uppercase ${
-          address ? "border-good text-good" : "border-border text-ink-dim hover:border-good hover:text-good"
+        className={`border px-3 py-2 text-xs font-data ${
+          address ? "border-good text-good" : "uppercase border-border text-ink-dim hover:border-good hover:text-good"
         }`}
       >
         {address ? short(address) : connecting ? "connecting…" : "connect wallet"}
