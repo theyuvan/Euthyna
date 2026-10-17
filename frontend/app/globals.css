@@ -96,3 +96,12 @@ body {
     animation: none;
   }
 }
+/* fullscreen shows only the deck, scaled up a touch for a projector */
+.pitch-deck:fullscreen {
+  background: var(--bg);
+  min-height: 100vh;
+  overflow: auto;
+}
+.pitch-deck:fullscreen .slide-in {
+  zoom: 1.12;
+}

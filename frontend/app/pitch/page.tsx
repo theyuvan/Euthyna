@@ -1,17 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getBusinesses, getStats, type Business, type Stats } from "@/lib/api";
 import { EuthynaMark } from "@/components/mark";
 
-const REPO = "https://github.com/theyuvan/Euthyna";
 
-const SLIDES = ["Euthyna", "Live numbers", "The problem", "What we built", "How it works", "Why it's different", "Try it"];
+const SLIDES = ["Euthyna", "Live numbers", "The problem", "What we built", "How it works", "Why it's different"];
 
 export default function PitchPage() {
   const [i, setI] = useState(0);
+  const [full, setFull] = useState(false);
+  const deck = useRef<HTMLDivElement>(null);
   const last = SLIDES.length - 1;
+
+  // Fullscreen takes only the deck (slides + controls), not the site navbar, like a presentation.
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else deck.current?.requestFullscreen().catch(() => {});
+  }, []);
+  useEffect(() => {
+    const onChange = () => setFull(document.fullscreenElement === deck.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
 
   const go = useCallback((n: number) => {
     const next = Math.max(0, Math.min(last, n));
@@ -36,14 +48,11 @@ export default function PitchPage() {
         go(i - 1);
       } else if (e.key === "Home") go(0);
       else if (e.key === "End") go(last);
-      else if (e.key === "f" || e.key === "F") {
-        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-        else document.documentElement.requestFullscreen().catch(() => {});
-      }
+      else if (e.key === "f" || e.key === "F") toggleFullscreen();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [i, go, last]);
+  }, [i, go, last, toggleFullscreen]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -65,6 +74,7 @@ export default function PitchPage() {
         </div>
       </div>
 
+      <div ref={deck} className="pitch-deck flex-1 flex flex-col bg-bg">
       <div className="flex-1 flex items-center">
         <div key={i} className="slide-in w-full max-w-[1180px] mx-auto px-8 py-8">
           {i === 0 && <TitleSlide />}
@@ -73,7 +83,6 @@ export default function PitchPage() {
           {i === 3 && <SolutionSlide />}
           {i === 4 && <WorkflowSlide />}
           {i === 5 && <DifferentSlide />}
-          {i === 6 && <TrySlide />}
         </div>
       </div>
 
@@ -106,10 +115,17 @@ export default function PitchPage() {
           >
             →
           </button>
-          <span className="ml-auto text-[10px] font-data text-ink-dim uppercase tracking-widest">
+          <span className="ml-auto hidden sm:inline text-[10px] font-data text-ink-dim uppercase tracking-widest">
             ← → to move · F for fullscreen
           </span>
+          <button
+            onClick={toggleFullscreen}
+            className="ml-auto sm:ml-0 border border-border px-3 py-2 text-[10px] font-data uppercase tracking-widest text-ink-dim hover:border-ink hover:text-ink"
+          >
+            {full ? "Exit fullscreen" : "Fullscreen"}
+          </button>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -390,47 +406,6 @@ function DifferentSlide() {
             <div className="text-xs text-ink-dim leading-relaxed">{d}</div>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function TrySlide() {
-  return (
-    <div>
-      <Kicker n={7} label="Try it" />
-      <Headline>
-        Put one real bill on it.
-        <br />
-        Five minutes.
-      </Headline>
-      <div className="hairline-grid grid grid-cols-1 md:grid-cols-4 border border-border">
-        {[
-          ["Get test USDC", "faucet.circle.com, Arc Testnet"],
-          ["Create a vault", "Connect MetaMask on Onboard"],
-          ["Add a payee and a bill", "Payee goes live in 1 hour"],
-          ["Fund it", "Watch the agent pay and commit"],
-        ].map(([t, d], n) => (
-          <div key={t} className="bg-bg p-5">
-            <div className="font-data text-xs text-good mb-3">{String(n + 1).padStart(2, "0")}</div>
-            <div className="font-macro uppercase text-sm mb-1.5">{t}</div>
-            <div className="text-xs text-ink-dim">{d}</div>
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-4 mt-8">
-        <Link href="/console/onboard" className="border border-good text-good px-5 py-3 text-xs font-data uppercase hover:bg-good hover:text-bg">
-          Open Onboard
-        </Link>
-        <Link href="/console/trust" className="border border-border text-ink-dim px-5 py-3 text-xs font-data uppercase hover:border-ink hover:text-ink">
-          See the trust ledger
-        </Link>
-        <Link href="/docs" className="text-xs font-data text-ink-dim hover:text-ink underline decoration-border underline-offset-2">
-          Docs
-        </Link>
-        <a href={REPO} target="_blank" rel="noreferrer" className="text-xs font-data text-ink-dim hover:text-ink underline decoration-border underline-offset-2">
-          Source on GitHub
-        </a>
       </div>
     </div>
   );
