@@ -8,7 +8,7 @@ import {EuthynaVault} from "../src/EuthynaVault.sol";
 import {EuthynaFactory} from "../src/EuthynaFactory.sol";
 
 /// Reads real Arc testnet state. Skipped unless ARC_RPC_URL is set:
-///   ARC_RPC_URL=https://rpc.testnet.arc.network forge test --match-contract ArcFork -vvv
+///   ARC_RPC_URL=https://rpc.testnet.arc.io forge test --match-contract ArcFork -vvv
 /// Note: Arc's USDC transfer goes through a native precompile (0x1800...) that Foundry's EVM cannot
 /// execute, so transfers are exercised on the live chain by worker/scripts/smoke.ts, not here.
 contract ArcForkTest is Test {

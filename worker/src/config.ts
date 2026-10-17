@@ -7,7 +7,13 @@ const optionalHex = z.preprocess((v) => (v === "" ? undefined : v), hex.optional
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
-  ARC_RPC_URL: z.string().url().default("https://rpc.testnet.arc.network"),
+  ARC_RPC_URL: z.string().url().default("https://rpc.testnet.arc.io"),
+  // Tried in order when the primary errors or rate-limits. Must accept 5000-block getLogs ranges
+  // (LOG_CHUNK_BLOCKS) — drpc caps at 100 and quicknode 429s readily, so neither is listed.
+  ARC_RPC_FALLBACK_URLS: z
+    .string()
+    .default("https://rpc.blockdaemon.testnet.arc.io")
+    .transform((s) => s.split(",").map((u) => u.trim()).filter(Boolean)),
   ARC_CHAIN_ID: z.coerce.number().default(5042002),
   EXPLORER_URL: z.string().default("https://testnet.arcscan.app"),
   FACTORY_ADDRESS: optionalHex,

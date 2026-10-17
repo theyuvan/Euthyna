@@ -126,8 +126,8 @@ git submodule update --init --recursive
 # contracts
 cd contracts
 forge build && forge test
-ARC_RPC_URL=https://rpc.testnet.arc.network forge test --match-contract ArcFork   # read-only fork checks
-forge script script/Deploy.s.sol --rpc-url https://rpc.testnet.arc.network --private-key $DEPLOYER_KEY --broadcast
+ARC_RPC_URL=https://rpc.testnet.arc.io forge test --match-contract ArcFork   # read-only fork checks
+forge script script/Deploy.s.sol --rpc-url https://rpc.testnet.arc.io --private-key $DEPLOYER_KEY --broadcast
 
 # worker
 cd ../worker
