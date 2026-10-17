@@ -39,6 +39,9 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <Link href="/pitch" className="block px-4 py-2.5 text-xs tracking-wide border-t border-border text-ink-dim hover:text-ink hover:bg-surface">
+        PITCH ↗
+      </Link>
       <Link href="/docs" className="block px-4 py-2.5 text-xs tracking-wide border-t border-border text-ink-dim hover:text-ink hover:bg-surface">
         DOCS ↗
       </Link>

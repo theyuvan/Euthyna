@@ -30,8 +30,8 @@ export default function DocsPage() {
             EUTHYNA
           </Link>
           <nav className="flex items-center gap-6 text-xs font-data text-ink-dim">
-            <Link href="/#businesses" className="hover:text-ink">
-              BUSINESSES
+            <Link href="/pitch" className="hover:text-ink">
+              PITCH
             </Link>
             <span className="text-ink">DOCS</span>
             <Link href="/console" className="border border-good text-good px-3 py-1.5 hover:bg-good hover:text-bg">

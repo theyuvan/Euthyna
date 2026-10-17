@@ -46,9 +46,9 @@ export default function LandingPage() {
       <div className="border-b border-border px-8 py-5 flex items-center justify-between max-w-[1280px] mx-auto">
         <div className="font-macro text-base tracking-tight">EUTHYNA</div>
         <nav className="flex items-center gap-6 text-xs font-data text-ink-dim">
-          <a href="#businesses" className="hover:text-ink">
-            BUSINESSES
-          </a>
+          <Link href="/pitch" className="hover:text-ink">
+            PITCH
+          </Link>
           <Link href="/docs" className="hover:text-ink">
             DOCS
           </Link>
