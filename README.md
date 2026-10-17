@@ -15,6 +15,7 @@ Built for the Tameion Agents Hackathon (Canteen × Circle, on Arc).
   [/console](https://euthynax.vercel.app/console), and the one settled hit at
   [/console/trust?vault=0x4a08…](https://euthynax.vercel.app/console/trust?vault=0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5).
 - **API:** [euthyna-np2i.onrender.com](https://euthyna-np2i.onrender.com/api/stats).
+- **Try it:** [docs/onboarding.md](docs/onboarding.md) walks a new business through onboarding in 5 minutes.
 
 ## Project structure
 
@@ -28,7 +29,8 @@ euthyna/
 │   ├── frontend.md  pages, wallets, running and deploying the console
 │   ├── backend.md   agent loop, LLM providers, setup, API reference
 │   ├── contract.md  mechanism, scoring, loophole audit, deployed addresses
-│   └── design.md    the UI design system
+│   ├── design.md    the UI design system
+│   └── onboarding.md  5-minute guide for a new business
 └── render.yaml      Render Blueprint for the backend
 ```
 
@@ -64,10 +66,10 @@ Every claim below can be checked on [Arcscan](https://testnet.arcscan.app) or ag
   on vault `0x4a08…F2b5`.
   - That vault is a **test vault** with short parameters (2-minute minimum horizon), so the loop can be shown
     in hours instead of days. It is labeled as test everywhere and excluded from the public numbers.
-- **Autonomous payments on real (non-test) vaults:** 6 bills, 39.10 USDC, to 5 distinct payees, all sent by
+- **Autonomous payments on real (non-test) vaults:** 8 bills, 49.10 USDC (as of 17 Oct), to 5 distinct payees, all sent by
   the agent's Circle wallet. The first was
   [`0x791f…0876`](https://testnet.arcscan.app/tx/0x791f71d1c955a8ca57c0b6c60692ae85dee09bf6f3cef135c96486283ba30876).
-  - One of the six, `DOMAIN-TEST-2` (0.10 USDC), was paid **about 33 hours late**: Arc retired its old RPC
+  - One of them, `DOMAIN-TEST-2` (0.10 USDC), was paid **about 33 hours late**: Arc retired its old RPC
     domain while it was due, and the agent couldn't reach the chain. No commitment covered it, so the score
     is unaffected, but it was a late payment.
 - **Self-serve onboarding, end to end, from a real MetaMask:** a new owner created a vault, added a payee and
