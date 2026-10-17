@@ -20,13 +20,13 @@
 |---|---|
 | Production factory | [`0xD6846FB7BAD7F8CDba6eE8fB4b42D4e16A30d658`](https://testnet.arcscan.app/address/0xD6846FB7BAD7F8CDba6eE8fB4b42D4e16A30d658) |
 | Production vault ("Euthyna") | [`0x0767f13610b794f1de85CEe78728114df1Ffa23d`](https://testnet.arcscan.app/address/0x0767f13610b794f1de85CEe78728114df1Ffa23d) |
-| Second vault ("Euthyna Infra & API Costs") | [`0xc5A7E94bd82a479Da2AFaa65B2147666f4Abf142`](https://testnet.arcscan.app/address/0xc5A7E94bd82a479Da2AFaa65B2147666f4Abf142) |
+| Second vault ("Euthyna Infra & API Costs") | [`0xc5A7E94bd82a479Da2AFAa65B2147666f4Abf142`](https://testnet.arcscan.app/address/0xc5A7E94bd82a479Da2AFAa65B2147666f4Abf142) |
 | Test factory (short parameters) | [`0xffe19C5eBb3A8c70546B4bD033f54e89dc807438`](https://testnet.arcscan.app/address/0xffe19C5eBb3A8c70546B4bD033f54e89dc807438) |
 | Test vault with the settled hit | [`0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5`](https://testnet.arcscan.app/address/0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5) |
 | USDC (Arc native) | `0x3600000000000000000000000000000000000000` |
 
-> Explorer: [testnet.arcscan.app](https://testnet.arcscan.app). Contracts are verified; deployment records are
-> in `contract/broadcast/`.
+> Explorer: [testnet.arcscan.app](https://testnet.arcscan.app). Source code is in `contract/src/` and deployment
+> records are in `contract/broadcast/`.
 
 ---
 
@@ -38,7 +38,7 @@ that limit isn't a setting. It lives in the vault contract and moves only when t
 that it kept its promises.
 
 ```
-ONBOARD  →  The owner creates a vault, approves payees and registers bills (3 wallet signatures)
+ONBOARD  →  The owner creates a vault, approves payees and registers bills, all from their own wallet
 DECIDE   →  The agent snapshots the vault; code computes every number; an LLM proposes; policy checks
 PAY      →  Bills are paid on time from the agent's Circle wallet, with a decision hash on-chain
 COMMIT   →  Parking idle cash is a falsifiable promise: "every bill due before T is paid on time"
@@ -74,7 +74,7 @@ Euthyna makes trust a **contract-enforced track record**.
 | Piece | What it does |
 |---|---|
 | **Owner's vault** | USDC, payees and bills live in a contract the owner controls. The agent acts only through it. |
-| **Allowlist only** | The agent has no function that sends money to an address of its choosing. New payees wait an hour before they can be paid. |
+| **Allowlist only** | The agent has no function that sends money to an address of its choosing. New payees wait out a delay (1 hour on production vaults) before they can be paid. |
 | **Every saving is a promise** | `sweep()` moves idle cash to reserve and opens a commitment: every bill due before `T` will be paid on time from liquid cash. |
 | **Graded by the contract** | `settle()` is permissionless. After `T + grace` the contract checks its own records: hit or miss. |
 | **Limit = track record** | `autonomousLimit = min(ownerCeiling, baseLimit + rate × score)`. A hit adds to the score linearly; a miss halves it and freezes sweeps for 24 hours. |
@@ -127,8 +127,8 @@ Euthyna makes trust a **contract-enforced track record**.
 
 | Feature | How Euthyna uses it |
 |---|---|
-| **Developer-controlled wallets** | Each vault gets its own agent wallet, created by the backend at onboarding |
-| **Smart-contract accounts (ERC-4337)** | The agent signs as an SCA; the owner's key never touches the backend |
+| **Developer-controlled wallets** | The agent acts through a Circle wallet; self-serve onboarding creates a new agent wallet for each new vault |
+| **Smart-contract accounts (ERC-4337)** | The agent signs as an SCA; owners sign in their own wallet, and the hosted backend never holds an owner key |
 | **Gas Station** | Agent transactions are gas-sponsored |
 | **Idempotency keys** | Each action uses a key derived from (decision id, index), so a retry can never pay twice |
 | **Webhook endpoint** | `POST /webhooks/circle` nudges the indexer, so new transactions show up fast |
@@ -159,15 +159,102 @@ const r = await send({ to: vault, data, from: agentAddress, walletId, idempotenc
 │  Settler       settles matured commitments every 10 min                  │
 │  Indexer       mirrors vault + factory events into Postgres              │
 │  HTTP API      public reads, owner-signed writes, SSE live stream        │
-│  LLM chain     8 free models (Gemini first, OpenRouter fallback)         │
+│  LLM chain     free models, Gemini first with OpenRouter as fallback     │
 └──────────┬──────────────────────────┬────────────────────────┬──────────┘
            │ Circle W3S API            │ Postgres (Supabase)    │ Arc RPC
            ▼                           ▼                        ▼
 ┌─────────────────────┐   ┌───────────────────────┐   ┌──────────────────────────┐
 │ Agent SCA wallet    │   │ decisions, actions,   │   │ EuthynaFactory           │
-│ (ERC-4337, Gas      │──▶│ obligations, payees,  │   │ EuthynaVault (per owner) │
+│ (ERC-4337, Gas      │   │ obligations, payees,  │   │ EuthynaVault (per vault) │
 │  Station sponsored) │   │ commitments, events   │   │ USDC                     │
 └─────────────────────┘   └───────────────────────┘   └──────────────────────────┘
+```
+
+### Code map
+
+Every box is a real file; every arrow is a call or transaction that exists in the code.
+
+```mermaid
+flowchart TD
+    owner(("Business owner / anyone"))
+
+    subgraph FE["Frontend (frontend/)"]
+        onboard["Onboard<br/>app/console/onboard/page.tsx"]
+        trust["Trust + Settle<br/>app/console/trust/page.tsx"]
+        replay["Replay (re-hash in browser)<br/>app/console/replay/page.tsx"]
+        views["Treasury, Decisions, Escalations, Stats<br/>app/console/*"]
+        wallet["Wallet (MetaMask, EIP-191 auth)<br/>lib/wallet.ts"]
+        apiclient["API client<br/>lib/api.ts"]
+        rpcfe["Arc RPC reads<br/>lib/chain.ts"]
+    end
+
+    subgraph BE["Backend (backend/src/)"]
+        server["HTTP API + SSE<br/>server.ts"]
+        scheduler["Scheduler: agent 30 min, settler 10 min, indexer<br/>scheduler.ts"]
+        agent["Agent loop<br/>agent.ts"]
+        snapshot["Vault snapshot<br/>snapshot.ts"]
+        precompute["Code-computed numbers<br/>precompute.ts"]
+        llm["LLM decision + fallback chain<br/>llm.ts, llm-chain.ts"]
+        policy["Policy checks<br/>policy.ts"]
+        canonical["Decision hash (keccak256)<br/>canonical.ts"]
+        settler["Settler<br/>settler.ts"]
+        indexer["Indexer<br/>indexer.ts"]
+        invoice["Invoice OCR<br/>invoice.ts"]
+        executor["Transaction sender<br/>executor.ts"]
+        rpcbe["Arc RPC + fallback<br/>chain.ts"]
+        db[("Postgres<br/>db.ts, db/schema.sql")]
+    end
+
+    subgraph CH["Arc testnet (contract/src/)"]
+        factory{{"EuthynaFactory.sol"}}
+        vault{{"EuthynaVault.sol<br/>pay, sweep, settle, score, limits"}}
+    end
+
+    circle["Circle developer-controlled wallet<br/>(ERC-4337, Gas Station)"]
+    models["Gemini / OpenRouter"]
+
+    owner --> onboard
+    owner --> trust
+    owner --> replay
+    owner --> views
+    onboard -->|"createVault"| factory
+    onboard -->|"addPayee, registerObligation"| vault
+    trust -->|"settle(), signed in the user's wallet"| vault
+    onboard --> wallet
+    trust --> wallet
+    trust --> rpcfe
+    rpcfe -->|"reads"| vault
+    onboard --> apiclient
+    views --> apiclient
+    replay --> apiclient
+    apiclient -->|"HTTPS, owner-signed writes"| server
+    server -->|"manual run"| agent
+    server -->|"manual settle"| settler
+    server --> invoice
+    server -->|"new agent wallet"| circle
+    scheduler --> agent
+    scheduler --> settler
+    scheduler --> indexer
+    agent --> snapshot
+    agent --> precompute
+    agent --> llm
+    agent --> policy
+    agent --> canonical
+    agent --> executor
+    llm --> models
+    invoice --> models
+    invoice --> executor
+    settler --> executor
+    snapshot --> rpcbe
+    snapshot --> db
+    indexer -->|"getLogs"| rpcbe
+    indexer -->|"mirrors events"| db
+    agent -->|"decision records"| db
+    executor -->|"simulate"| rpcbe
+    executor -->|"send with idempotency key"| circle
+    circle -->|"pay, sweep, redeem, escalate, settle"| vault
+    rpcbe --> vault
+    rpcbe --> factory
 ```
 
 ---
@@ -206,7 +293,7 @@ sequenceDiagram
     participant Circle
     participant Vault as EuthynaVault
 
-    Scheduler->>Agent: every 30 min, or on a new bill / inflow
+    Scheduler->>Agent: every 30 min, or when new vault events are indexed
     Agent->>Vault: snapshot (balances, bills, payees, limits)
     Agent->>Agent: precompute: payable bills, safe sweep amount, horizon
     Agent->>LLM: decide (JSON schema, falls back to the next model on failure)
@@ -217,7 +304,7 @@ sequenceDiagram
     Agent->>Vault: simulate each action
     Agent->>Circle: send pay / sweep with decisionHash + idempotency key
     Circle->>Vault: pay(id, decisionHash) / sweep(amount, horizon, decisionHash)
-    Vault-->>Agent: Paid / Swept events → indexed → live on SSE
+    Vault-->>Agent: Paid / Swept events (mirrored into Postgres by the indexer)
 ```
 
 ### Settlement
@@ -282,16 +369,17 @@ OPEN (sweep) ──▶ T passes ──▶ T + grace ──▶ settle() ──▶
                                                     └──▶ MISS (score ÷ 2, sweeps frozen 24h)
 ```
 
-Limits: at most 5 open commitments; horizon between the vault's `minHorizon` (≥ 1 minute) and 14 days.
-Production vaults use a 1-hour minimum horizon and a 1-hour payee delay.
+Limits: at most 5 open commitments; horizon up to 14 days, with a minimum horizon of 1 hour on production
+vaults. The deployed production vaults enforce that minimum as the constant `MIN_HORIZON` (3600 s) and use a
+1-hour payee delay; the current source makes the minimum a per-vault parameter (`minHorizon`, ≥ 1 minute).
 
 ### EuthynaFactory.sol
 
-Creates a vault for an owner and an agent with the factory's default parameters (or custom ones through
-`createVaultWithParams`), and indexes vaults by owner.
+Creates a vault for an owner and an agent with the factory's default parameters, and indexes vaults by owner.
+The current source also adds `createVaultWithParams` for custom parameters; the deployed factories predate it.
 
-Details: [docs/contract.md](docs/contract.md). 38 Foundry tests pass (plus one fork test that runs with
-`ARC_RPC_URL` set).
+Details: [docs/contract.md](docs/contract.md). 38 Foundry tests, plus 2 fork tests that run with
+`ARC_RPC_URL` set.
 
 ---
 
@@ -322,10 +410,10 @@ Every claim here can be checked on [Arcscan](https://testnet.arcscan.app) or aga
     [`0x31ba…2427`](https://testnet.arcscan.app/tx/0x31ba5943f9d5e7e300f894674f54b96120a08820bb2a41e12bb51c2dc1722427),
     settle [`0xe474…b3e2`](https://testnet.arcscan.app/tx/0xe474bc08c6dfaff1267eeecb7580b41035d86b8742a36aee1a0c93910365b3e2).
     The script and its record are in [`backend/scripts/`](backend/scripts/demo-miss.ts).
-- **Self-serve onboarding from a real MetaMask:** a new owner created a vault, added a payee and registered a
-  bill, and the agent paid it
+- **Self-serve onboarding from MetaMask:** a vault was created, a payee added and a bill registered entirely
+  from the browser wallet, and the agent paid it
   ([`0x4df9…da0b`](https://testnet.arcscan.app/tx/0x4df93f2b6e5c24c37997bdaf2edfcd353f9b75802a3e0b13bc2b9fbb78a8da0b)).
-- **The policy layer at work:** 27 model-proposed actions clamped or rejected before reaching the chain
+- **The policy layer at work:** 29 model-proposed actions clamped or rejected before reaching the chain
   (as of 18 Oct), catching the model when it was wrong. Live count in `/api/stats`.
 - **Every decision is replayable:** hashed before any money moves, with the hash emitted on-chain alongside
   the action and re-verified in the browser on the Replay page.
@@ -340,14 +428,14 @@ commitments, hits and misses, and policy interventions. Test vaults (`0x82a9…2
 
 | Piece | Status |
 |---|---|
-| Vault: pay / sweep / redeem / settle | ✅ live on Arc testnet, verified on Arcscan; 38 Foundry tests |
+| Vault: pay / sweep / redeem / settle | ✅ deployed on Arc testnet, viewable on Arcscan; 38 Foundry tests |
 | Score → autonomous limit | ✅ enforced entirely in the contract; hit and miss both settled on-chain |
 | Agent loop (snapshot → decide → policy → execute) | ✅ every 30 min and on events; 12/12 policy tests |
 | Payments through a Circle SCA wallet | ✅ verified end to end (Gas Station-sponsored, ERC-4337) |
 | Decision hash + replay | ✅ re-hashed in the viewer's browser and checked against the stored, recomputed and on-chain hashes |
 | Permissionless settle from the UI | ✅ Trust page: countdown, then a Settle button for any connected wallet |
 | Live reasoning stream | ✅ SSE at `/api/vaults/:id/live` |
-| LLM | ✅ automatic fallback chain of 8 free models; the record names the model that answered |
+| LLM | ✅ automatic fallback chain of free models (Gemini first, OpenRouter as fallback); the record names the model that answered |
 | Invoice OCR | ✅ vision extraction and exact payee matching, verified live ([`0x4d61…0462`](https://testnet.arcscan.app/tx/0x4d614e69748dfcf6d41578506af8f857230a2189ce41373004e7f9b43a360462)) |
 | Loophole audit | ✅ all 22 attack scenarios closed in the contract or policy layer |
 | Frontend | ✅ landing, pitch deck, docs and 7 console pages on live data, with MetaMask; responsive on mobile |
@@ -398,7 +486,7 @@ euthyna/
 │   │   ├── invoice.ts            # invoice OCR → registered bill
 │   │   └── server.ts             # HTTP API + SSE
 │   ├── db/schema.sql
-│   └── scripts/                  # setup-circle, create-wallet, onboard, smoke, e2e-local, …
+│   └── scripts/                  # setup-circle, create-agent-wallet, onboard, smoke, e2e-local, demo-miss, …
 │
 ├── frontend/
 │   ├── app/
@@ -458,8 +546,8 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8787 npm run dev   # http://localhost:3000
 ### 4. Try the flow
 
 1. **Get test USDC** at [faucet.circle.com](https://faucet.circle.com) (Arc Testnet).
-2. **Onboard:** open `/console/onboard`, connect MetaMask, create a vault, add a payee and a bill (due at
-   least an hour after the payee goes live).
+2. **Onboard:** open `/console/onboard`, connect MetaMask, create a vault, add a payee and a bill (due after the
+   payee goes live; the page suggests one hour after).
 3. **Fund the vault** with test USDC.
 4. **Watch the agent:** Decisions shows each run, Replay re-verifies its hash, Trust shows commitments.
 5. **Settle:** when a commitment's countdown ends, press Settle on the Trust page and watch the contract grade

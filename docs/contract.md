@@ -96,11 +96,11 @@ All 22 attacks from the spec are closed. Tests are in `contract/test/EuthynaVaul
 | --- | --- |
 | Production factory | `0xD6846FB7BAD7F8CDba6eE8fB4b42D4e16A30d658` |
 | Production vault ("Euthyna") | `0x0767f13610b794f1de85CEe78728114df1Ffa23d` |
-| Second vault, same owner ("Euthyna Infra & API Costs") | `0xc5A7E94bd82a479Da2AFaa65B2147666f4Abf142` |
+| Second vault, same owner ("Euthyna Infra & API Costs") | `0xc5A7E94bd82a479Da2AFAa65B2147666f4Abf142` |
 | Test factory (short parameters) | `0xffe19C5eBb3A8c70546B4bD033f54e89dc807438` |
 | Test vault with the settled hit | `0x4a08A58be01B5311D36EF4b042AA83BF738cF2b5` |
 
-Deployment records are in `contract/broadcast/`. Contracts are verified on
+Deployment records are in `contract/broadcast/`. All of these can be viewed on
 [Arcscan](https://testnet.arcscan.app).
 
 ## Build and test
