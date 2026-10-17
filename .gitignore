@@ -12,25 +12,9 @@ dist/
 circle-recovery.dat
 recovery_file_*.dat
 
-# third-party design "taste" skills (Leonxlnx/taste-skill) — local tooling, not project code
-.agents/skills/brandkit/
-.agents/skills/design-taste-frontend/
-.agents/skills/design-taste-frontend-v1/
-.agents/skills/design-taste-frontend-v2-experimental/
-.agents/skills/full-output-enforcement/
-.agents/skills/gpt-taste/
-.agents/skills/high-end-visual-design/
-.agents/skills/image-to-code/
-.agents/skills/imagegen-frontend-mobile/
-.agents/skills/imagegen-frontend-web/
-.agents/skills/industrial-brutalist-ui/
-.agents/skills/minimalist-ui/
-.agents/skills/redesign-existing-projects/
-.agents/skills/stitch-design-taste/
-# symlinks to the skills above
-.claude/skills/
-# per-developer Claude Code settings
-.claude/settings.local.json
+# AI-assistant tooling (installed skills, Claude Code settings) — local to each developer, not project code
+.agents/
+.claude/
 
 # Playwright MCP screenshots and logs
 .playwright-mcp/
